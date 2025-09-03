@@ -18,12 +18,16 @@
 
 // Engine datatypes
 #include "core/datatypes/LuaDatatypes.h"
+#include "core/datatypes/Vector2.h"
 #include "core/datatypes/Vector3Game.h"
 #include "core/datatypes/CFrame.h"
 #include "core/datatypes/Color3.h"
 #include "core/datatypes/Random.h"
 #include "core/datatypes/Enum.h"
 #include "core/logging/Logging.h"
+
+// Services
+#include "bootstrap/services/TweenService.h"
 
 // Standard library
 #include <cstring>
@@ -454,6 +458,176 @@ static int m_ClearAllChildren(lua_State* L) {
     return 0;
 }
 
+// Model-specific methods
+static int m_GetBoundingBox(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) { 
+        lb::push(L, CFrame{});
+        lb::push(L, Vector3Game{0, 0, 0});
+        return 2; 
+    }
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "GetBoundingBox can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) {
+        lb::push(L, CFrame{});
+        lb::push(L, Vector3Game{0, 0, 0});
+        return 2;
+    }
+    
+    auto [orientation, size] = model->GetBoundingBox();
+    lb::push(L, orientation);
+    lb::push(L, Vector3Game::fromRay(size));
+    return 2;
+}
+
+static int m_GetExtentsSize(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) { 
+        lb::push(L, Vector3Game{0, 0, 0});
+        return 1; 
+    }
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "GetExtentsSize can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) {
+        lb::push(L, Vector3Game{0, 0, 0});
+        return 1;
+    }
+    
+    ::Vector3 size = model->GetExtentsSize();
+    lb::push(L, Vector3Game::fromRay(size));
+    return 1;
+}
+
+static int m_MoveTo(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) return 0;
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "MoveTo can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) return 0;
+    
+    const auto* pos = lb::check<Vector3Game>(L, 2);
+    model->MoveTo(pos->toRay());
+    return 0;
+}
+
+static int m_TranslateBy(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) return 0;
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "TranslateBy can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) return 0;
+    
+    const auto* delta = lb::check<Vector3Game>(L, 2);
+    model->TranslateBy(delta->toRay());
+    return 0;
+}
+
+static int m_ScaleTo(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) return 0;
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "ScaleTo can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) return 0;
+    
+    double scaleFactor = luaL_checknumber(L, 2);
+    model->ScaleTo(scaleFactor);
+    return 0;
+}
+
+static int m_GetScale(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) { 
+        lua_pushnumber(L, 1.0);
+        return 1; 
+    }
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "GetScale can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) {
+        lua_pushnumber(L, 1.0);
+        return 1;
+    }
+    
+    lua_pushnumber(L, model->GetScale());
+    return 1;
+}
+
+static int m_GetPivot(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) { 
+        lb::push(L, CFrame{});
+        return 1; 
+    }
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "GetPivot can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) {
+        lb::push(L, CFrame{});
+        return 1;
+    }
+    
+    lb::push(L, model->GetPivot());
+    return 1;
+}
+
+static int m_PivotTo(lua_State* L) {
+    auto* inst_ptr = l_check_instance(L, 1);
+    if (!inst_ptr || !*inst_ptr || !(*inst_ptr)->Alive) return 0;
+    
+    // Check if it's a Model
+    if ((*inst_ptr)->GetClassName() != "Model") {
+        luaL_error(L, "PivotTo can only be called on Model instances");
+        return 0;
+    }
+    
+    auto model = std::dynamic_pointer_cast<ModelInstance>(*inst_ptr);
+    if (!model) return 0;
+    
+    const auto* cf = lb::check<CFrame>(L, 2);
+    model->PivotTo(*cf);
+    return 0;
+}
+
 // ================== Property Access ==================
 
 static int l_instance_index(lua_State* L) {
@@ -648,6 +822,164 @@ static int l_task_delay(lua_State* L) {
     return 1;
 }
 
+// ================== TweenService Lua Bindings ==================
+
+// TweenInfo userdata
+struct LuaTweenInfoUD { TweenInfo info; };
+
+static LuaTweenInfoUD* checkTweenInfo(lua_State* L, int idx) {
+    return static_cast<LuaTweenInfoUD*>(luaL_checkudata(L, idx, "Librebox.TweenInfo"));
+}
+
+static int l_TweenInfo_new(lua_State* L) {
+    float time = (float)luaL_optnumber(L, 1, 1.0);
+    
+    // Handle easing style parameter (can be integer or enum item table)
+    int easingStyleInt = (int)EasingStyle::Quad; // default
+    if (lua_type(L, 2) == LUA_TNUMBER) {
+        easingStyleInt = (int)lua_tointeger(L, 2);
+    } else if (lua_type(L, 2) == LUA_TTABLE) {
+        // Extract Value from enum item table
+        lua_getfield(L, 2, "Value");
+        if (lua_isnumber(L, -1)) {
+            easingStyleInt = (int)lua_tointeger(L, -1);
+        }
+        lua_pop(L, 1);
+    }
+    
+    // Handle easing direction parameter (can be integer or enum item table)
+    int easingDirectionInt = (int)EasingDirection::Out; // default
+    if (lua_type(L, 3) == LUA_TNUMBER) {
+        easingDirectionInt = (int)lua_tointeger(L, 3);
+    } else if (lua_type(L, 3) == LUA_TTABLE) {
+        // Extract Value from enum item table
+        lua_getfield(L, 3, "Value");
+        if (lua_isnumber(L, -1)) {
+            easingDirectionInt = (int)lua_tointeger(L, -1);
+        }
+        lua_pop(L, 1);
+    }
+    
+    int repeatCount = (int)luaL_optinteger(L, 4, 0);
+    bool reverses = lua_toboolean(L, 5);
+    float delayTime = (float)luaL_optnumber(L, 6, 0.0);
+
+    EasingStyle easingStyle = static_cast<EasingStyle>(easingStyleInt);
+    EasingDirection easingDirection = static_cast<EasingDirection>(easingDirectionInt);
+
+    void* mem = lua_newuserdata(L, sizeof(LuaTweenInfoUD));
+    new (mem) LuaTweenInfoUD{ TweenInfo(time, easingStyle, easingDirection, repeatCount, reverses, delayTime) };
+    luaL_getmetatable(L, "Librebox.TweenInfo");
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+static int l_TweenInfo_gc(lua_State* L) {
+    auto* info = checkTweenInfo(L, 1);
+    if (info) info->~LuaTweenInfoUD();
+    return 0;
+}
+
+static void ensure_tweeninfo_meta(lua_State* L) {
+    if (luaL_newmetatable(L, "Librebox.TweenInfo")) {
+        lua_pushcfunction(L, l_TweenInfo_gc, "__gc");
+        lua_setfield(L, -2, "__gc");
+    }
+    lua_pop(L, 1);
+}
+
+// Tween userdata
+struct LuaTweenUD { std::shared_ptr<Tween> tween; };
+
+static LuaTweenUD* checkTween(lua_State* L, int idx) {
+    return static_cast<LuaTweenUD*>(luaL_checkudata(L, idx, "Librebox.Tween"));
+}
+
+static int l_Tween_Play(lua_State* L) {
+    auto* t = checkTween(L, 1);
+    if (t && t->tween) t->tween->Play();
+    return 0;
+}
+
+static int l_Tween_Pause(lua_State* L) {
+    auto* t = checkTween(L, 1);
+    if (t && t->tween) t->tween->Pause();
+    return 0;
+}
+
+static int l_Tween_Cancel(lua_State* L) {
+    auto* t = checkTween(L, 1);
+    if (t && t->tween) t->tween->Cancel();
+    return 0;
+}
+
+static int l_Tween_Destroy(lua_State* L) {
+    auto* t = checkTween(L, 1);
+    if (t && t->tween) t->tween->Destroy();
+    return 0;
+}
+
+static int l_Tween_index(lua_State* L) {
+    auto* t = checkTween(L, 1);
+    const char* key = luaL_checkstring(L, 2);
+
+    if (!t || !t->tween) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    if (std::strcmp(key, "Completed") == 0) {
+        Lua_PushSignal(L, t->tween->Completed);
+        return 1;
+    }
+
+    // Methods
+    lua_getmetatable(L, 1);
+    lua_getfield(L, -1, "__methods");
+    lua_pushvalue(L, 2);
+    lua_rawget(L, -2);
+    if (lua_isfunction(L, -1)) {
+        lua_remove(L, -2);
+        lua_remove(L, -2);
+        return 1;
+    }
+    lua_pop(L, 2);
+
+    lua_pushnil(L);
+    return 1;
+}
+
+static int l_Tween_gc(lua_State* L) {
+    auto* t = checkTween(L, 1);
+    if (t) t->~LuaTweenUD();
+    return 0;
+}
+
+static void ensure_tween_meta(lua_State* L) {
+    if (luaL_newmetatable(L, "Librebox.Tween")) {
+        lua_newtable(L);
+        lua_pushcfunction(L, l_Tween_Play, "Play"); lua_setfield(L, -2, "Play");
+        lua_pushcfunction(L, l_Tween_Pause, "Pause"); lua_setfield(L, -2, "Pause");
+        lua_pushcfunction(L, l_Tween_Cancel, "Cancel"); lua_setfield(L, -2, "Cancel");
+        lua_pushcfunction(L, l_Tween_Destroy, "Destroy"); lua_setfield(L, -2, "Destroy");
+        lua_setfield(L, -2, "__methods");
+
+        lua_pushcfunction(L, l_Tween_index, "__index");
+        lua_setfield(L, -2, "__index");
+        lua_pushcfunction(L, l_Tween_gc, "__gc");
+        lua_setfield(L, -2, "__gc");
+    }
+    lua_pop(L, 1);
+}
+
+void Lua_PushTween(lua_State* L, const std::shared_ptr<Tween>& tween) {
+    ensure_tween_meta(L);
+    void* mem = lua_newuserdata(L, sizeof(LuaTweenUD));
+    new (mem) LuaTweenUD{ tween };
+    luaL_getmetatable(L, "Librebox.Tween");
+    lua_setmetatable(L, -2);
+}
+
 // ================== Global API Registration ==================
 
 void RegisterSharedLibreboxAPI(lua_State* L) {
@@ -676,6 +1008,16 @@ void RegisterSharedLibreboxAPI(lua_State* L) {
     lua_pushcfunction(L, m_Clone, "Clone"); lua_setfield(L, -2, "Clone");
     lua_pushcfunction(L, m_IsA, "IsA"); lua_setfield(L, -2, "IsA");
 
+    // Model-specific methods
+    lua_pushcfunction(L, m_GetBoundingBox, "GetBoundingBox"); lua_setfield(L, -2, "GetBoundingBox");
+    lua_pushcfunction(L, m_GetExtentsSize, "GetExtentsSize"); lua_setfield(L, -2, "GetExtentsSize");
+    lua_pushcfunction(L, m_MoveTo, "MoveTo"); lua_setfield(L, -2, "MoveTo");
+    lua_pushcfunction(L, m_TranslateBy, "TranslateBy"); lua_setfield(L, -2, "TranslateBy");
+    lua_pushcfunction(L, m_ScaleTo, "ScaleTo"); lua_setfield(L, -2, "ScaleTo");
+    lua_pushcfunction(L, m_GetScale, "GetScale"); lua_setfield(L, -2, "GetScale");
+    lua_pushcfunction(L, m_GetPivot, "GetPivot"); lua_setfield(L, -2, "GetPivot");
+    lua_pushcfunction(L, m_PivotTo, "PivotTo"); lua_setfield(L, -2, "PivotTo");
+
     // legacy functions for compat
     lua_pushcfunction(L, m_GetChildren,   "getChildren");   lua_setfield(L, -2, "getChildren");
     lua_pushcfunction(L, m_Clone, "clone"); lua_setfield(L, -2, "clone");
@@ -701,6 +1043,7 @@ void RegisterSharedLibreboxAPI(lua_State* L) {
     lua_setglobal(L, "Instance");
 
     // Engine datatypes
+    lb::register_type<Vector2Game>(L);
     lb::register_type<Vector3Game>(L);
     lb::register_type<CFrame>(L);
     lb::register_type<Color3>(L);
@@ -716,6 +1059,13 @@ void RegisterSharedLibreboxAPI(lua_State* L) {
     lua_pushcfunction(L, l_task_spawn, "spawn"); lua_setfield(L, -2, "spawn");
     lua_pushcfunction(L, l_task_delay, "delay"); lua_setfield(L, -2, "delay");
     lua_setglobal(L, "task");
+
+    // TweenInfo library
+    ensure_tweeninfo_meta(L);
+    lua_newtable(L);
+    lua_pushcfunction(L, l_TweenInfo_new, "new");
+    lua_setfield(L, -2, "new");
+    lua_setglobal(L, "TweenInfo");
 
     // Enum global table
     RegisterEnumGlobal(L);
@@ -815,6 +1165,60 @@ static void RegisterEnumGlobal(lua_State* L) {
         lua_pushstring(L, "MouseButton3"); Lua_PushEnumItem(L, keyCode->GetItem("MouseButton3")); lua_settable(L, -3);
         
         lua_setfield(L, -2, "KeyCode");
+    }
+    
+    // EasingStyle enum
+    if (Enum* easingStyle = registry.GetEnum("EasingStyle")) {
+        lua_newtable(L); // EasingStyle table
+        
+        lua_pushstring(L, "Linear"); Lua_PushEnumItem(L, easingStyle->GetItem("Linear")); lua_settable(L, -3);
+        lua_pushstring(L, "Sine"); Lua_PushEnumItem(L, easingStyle->GetItem("Sine")); lua_settable(L, -3);
+        lua_pushstring(L, "Back"); Lua_PushEnumItem(L, easingStyle->GetItem("Back")); lua_settable(L, -3);
+        lua_pushstring(L, "Quad"); Lua_PushEnumItem(L, easingStyle->GetItem("Quad")); lua_settable(L, -3);
+        lua_pushstring(L, "Quart"); Lua_PushEnumItem(L, easingStyle->GetItem("Quart")); lua_settable(L, -3);
+        lua_pushstring(L, "Quint"); Lua_PushEnumItem(L, easingStyle->GetItem("Quint")); lua_settable(L, -3);
+        lua_pushstring(L, "Bounce"); Lua_PushEnumItem(L, easingStyle->GetItem("Bounce")); lua_settable(L, -3);
+        lua_pushstring(L, "Elastic"); Lua_PushEnumItem(L, easingStyle->GetItem("Elastic")); lua_settable(L, -3);
+        lua_pushstring(L, "Exponential"); Lua_PushEnumItem(L, easingStyle->GetItem("Exponential")); lua_settable(L, -3);
+        lua_pushstring(L, "Circular"); Lua_PushEnumItem(L, easingStyle->GetItem("Circular")); lua_settable(L, -3);
+        lua_pushstring(L, "Cubic"); Lua_PushEnumItem(L, easingStyle->GetItem("Cubic")); lua_settable(L, -3);
+        
+        lua_setfield(L, -2, "EasingStyle");
+    }
+    
+    // EasingDirection enum
+    if (Enum* easingDirection = registry.GetEnum("EasingDirection")) {
+        lua_newtable(L); // EasingDirection table
+        
+        lua_pushstring(L, "In"); Lua_PushEnumItem(L, easingDirection->GetItem("In")); lua_settable(L, -3);
+        lua_pushstring(L, "Out"); Lua_PushEnumItem(L, easingDirection->GetItem("Out")); lua_settable(L, -3);
+        lua_pushstring(L, "InOut"); Lua_PushEnumItem(L, easingDirection->GetItem("InOut")); lua_settable(L, -3);
+        
+        lua_setfield(L, -2, "EasingDirection");
+    }
+    
+    // MouseBehavior enum
+    if (Enum* mouseBehavior = registry.GetEnum("MouseBehavior")) {
+        lua_newtable(L); // MouseBehavior table
+        
+        lua_pushstring(L, "Default"); Lua_PushEnumItem(L, mouseBehavior->GetItem("Default")); lua_settable(L, -3);
+        lua_pushstring(L, "LockCenter"); Lua_PushEnumItem(L, mouseBehavior->GetItem("LockCenter")); lua_settable(L, -3);
+        lua_pushstring(L, "LockCurrentPosition"); Lua_PushEnumItem(L, mouseBehavior->GetItem("LockCurrentPosition")); lua_settable(L, -3);
+        
+        lua_setfield(L, -2, "MouseBehavior");
+    }
+    
+    // PartType enum
+    if (Enum* partType = registry.GetEnum("PartType")) {
+        lua_newtable(L); // PartType table
+        
+        lua_pushstring(L, "Ball"); Lua_PushEnumItem(L, partType->GetItem("Ball")); lua_settable(L, -3);
+        lua_pushstring(L, "Block"); Lua_PushEnumItem(L, partType->GetItem("Block")); lua_settable(L, -3);
+        lua_pushstring(L, "Cylinder"); Lua_PushEnumItem(L, partType->GetItem("Cylinder")); lua_settable(L, -3);
+        lua_pushstring(L, "Wedge"); Lua_PushEnumItem(L, partType->GetItem("Wedge")); lua_settable(L, -3);
+        lua_pushstring(L, "CornerWedge"); Lua_PushEnumItem(L, partType->GetItem("CornerWedge")); lua_settable(L, -3);
+        
+        lua_setfield(L, -2, "PartType");
     }
     
     lua_setglobal(L, "Enum");

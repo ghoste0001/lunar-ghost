@@ -70,23 +70,41 @@ static int v3_index(lua_State* L) {
     auto* v = check<Vector3Game>(L, 1);
     const char* key = luaL_checkstring(L, 2);
 
-    if (strcmp(key, "X") == 0) lua_pushnumber(L, v->x);
-    else if (strcmp(key, "Y") == 0) lua_pushnumber(L, v->y);
-    else if (strcmp(key, "Z") == 0) lua_pushnumber(L, v->z);
-    else if (strcmp(key, "Magnitude") == 0) lua_pushnumber(L, v->magnitude());
-    else if (strcmp(key, "Unit") == 0) push(L, v->normalized());
-    else {
-        // Look for method in metatable
-        luaL_getmetatable(L, Traits<Vector3Game>::MetaName());
-        lua_getfield(L, -1, "__index"); // This should be the methods table
-        lua_getfield(L, -1, key);
-        if (lua_isnil(L, -1)) {
-            // --- FIX WAS HERE ---
-            luaL_error(L, "invalid member '%s' for Vector3", key);
-            return 0;
-        }
+    if (strcmp(key, "X") == 0) {
+        lua_pushnumber(L, v->x);
+        return 1;
     }
-    return 1;
+    else if (strcmp(key, "Y") == 0) {
+        lua_pushnumber(L, v->y);
+        return 1;
+    }
+    else if (strcmp(key, "Z") == 0) {
+        lua_pushnumber(L, v->z);
+        return 1;
+    }
+    else if (strcmp(key, "Magnitude") == 0) {
+        lua_pushnumber(L, v->magnitude());
+        return 1;
+    }
+    else if (strcmp(key, "Unit") == 0) {
+        push(L, v->normalized());
+        return 1;
+    }
+    else {
+        // Look for method in the methods table stored in metatable
+        luaL_getmetatable(L, Traits<Vector3Game>::MetaName());
+        lua_getfield(L, -1, "__methods");
+        if (!lua_isnil(L, -1)) {
+            lua_getfield(L, -1, key);
+            if (!lua_isnil(L, -1)) {
+                return 1; // Found the method, return it
+            }
+        }
+        
+        // Method not found
+        luaL_error(L, "invalid member '%s' for Vector3", key);
+        return 0;
+    }
 }
 
 static const luaL_Reg V3_METHODS[] = {
@@ -107,7 +125,32 @@ static const luaL_Reg V3_META[] = {
     {nullptr,nullptr}
 };
 
+// --- Static Constants ---
+static int v3_static_index(lua_State* L) {
+    const char* key = luaL_checkstring(L, 2);
+    
+    if (strcmp(key, "zero") == 0) {
+        push(L, Vector3Game(0, 0, 0));
+        return 1;
+    }
+    else if (strcmp(key, "one") == 0) {
+        push(L, Vector3Game(1, 1, 1));
+        return 1;
+    }
+    else if (strcmp(key, "new") == 0) {
+        lua_pushcfunction(L, v3_new, "new");
+        return 1;
+    }
+    
+    return 0; // Property not found
+}
+
+static const luaL_Reg V3_STATICS[] = {
+    {"__index", v3_static_index},
+    {nullptr, nullptr}
+};
+
 lua_CFunction Traits<Vector3Game>::Ctor() { return v3_new; }
 const luaL_Reg* Traits<Vector3Game>::Methods() { return V3_METHODS; }
 const luaL_Reg* Traits<Vector3Game>::MetaMethods() { return V3_META; }
-const luaL_Reg* Traits<Vector3Game>::Statics() { return nullptr; }
+const luaL_Reg* Traits<Vector3Game>::Statics() { return V3_STATICS; }

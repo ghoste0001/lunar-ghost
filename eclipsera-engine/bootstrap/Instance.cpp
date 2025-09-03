@@ -13,12 +13,16 @@ static const char* ToClassName(InstanceClass c) {
         case InstanceClass::Game:        return "Game";
         case InstanceClass::Workspace:   return "Workspace";
         case InstanceClass::Part:        return "Part";
+        case InstanceClass::MeshPart:    return "MeshPart";
+        case InstanceClass::Model:       return "Model";
         case InstanceClass::Script:      return "Script";
         case InstanceClass::LocalScript: return "LocalScript";
         case InstanceClass::Folder:      return "Folder";
         case InstanceClass::Camera:      return "Camera";
+        case InstanceClass::Sky:         return "Sky";
         case InstanceClass::RunService:  return "RunService";
         case InstanceClass::UserInputService:    return "UserInputService";
+        case InstanceClass::TweenService:    return "TweenService";
         case InstanceClass::Lighting:    return "Lighting";
         default:                         return "Unknown";
     }
@@ -340,4 +344,13 @@ std::shared_ptr<Instance> Instance::New(const std::string& typeName) {
     if (it != types().end()) return (it->second.factory)();
     LOGW("Instance::New: unknown type '%s'", typeName.c_str());
     return nullptr;
+}
+
+std::vector<std::string> Instance::GetRegisteredTypes() {
+    std::vector<std::string> typeNames;
+    const auto& typeMap = types();
+    for (const auto& pair : typeMap) {
+        typeNames.push_back(pair.first);
+    }
+    return typeNames;
 }

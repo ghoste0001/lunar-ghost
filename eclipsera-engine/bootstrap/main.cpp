@@ -2,13 +2,19 @@
 #include "Renderer.h"
 #include "raymath.h"
 #include "Game.h"
+
 #include "bootstrap/instances/Script.h"
 #include "core/logging/Logging.h"
 #include "subsystems/filesystem/FileSystem.h"
-#include "instances/InstanceTypes.h"
-#include "services/RunService.h"
-#include "services/Lighting.h"
+
+#include "bootstrap/instances/InstanceTypes.h"
+#include "bootstrap/services/RunService.h"
+#include "bootstrap/services/Lighting.h"
+
 #include "bootstrap/services/UserInputService.h"
+#include "bootstrap/services/TweenService.h"
+#include "bootstrap/gui/GuiManager.h"
+
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -23,12 +29,16 @@
 #define WIN32_LEAN_AND_MEAN
 #define CloseWindow Win32CloseWindow
 #define ShowCursor  Win32ShowCursor
+#define DrawText Win32DrawText
+#define DrawTextEx Win32DrawTextEx
 #include <windows.h>
 #undef DrawText
+#undef DrawTextEx
 #undef CloseWindow
 #undef ShowCursor
 
 static Camera3D g_camera{};
+static std::unique_ptr<GuiManager> g_guiManager;
 
 // yaw/pitch state
 static float gYaw = 0.0f;
@@ -67,13 +77,23 @@ static int LoaderMenu(int padding = 38, int gap = 10,
 
         // header bar
         DrawRectangle(0, 0, GetScreenWidth(), headerHeight, WHITE);
-        DrawText("ECLIPSERA ENGINE Demo", padding, headerHeight/2 - 20, 40, BLACK);
+        if (GuiManager::IsCustomFontLoaded()) {
+            DrawTextEx(GuiManager::GetCustomFont(), "ECLIPSERA ENGINE Demo", {(float)padding, (float)(headerHeight/2 - 20)}, 40, 1.2f, BLACK);
+        } else {
+            DrawText("ECLIPSERA ENGINE Demo", padding, headerHeight/2 - 20, 40, BLACK);
+        }
 
         // instructions
         int instrY = headerHeight + 20;
-        DrawText("WASD to move, Arrow keys rotate", padding, instrY, 20, GRAY);
-        DrawText("Use UP/DOWN to select, ENTER or (1-4) to confirm", padding, instrY + 30, 20, GRAY);
-        DrawText("THIS IS A MODIFICATION OF LUNAR-ENGINE NOT OFFICIAL!", padding, instrY + 60, 20, GRAY);
+        if (GuiManager::IsCustomFontLoaded()) {
+            DrawTextEx(GuiManager::GetCustomFont(), "WASD to move, Arrow keys rotate", {(float)padding, (float)instrY}, 20, 1.2f, GRAY);
+            DrawTextEx(GuiManager::GetCustomFont(), "Use UP/DOWN to select, ENTER or (1-4) to confirm", {(float)padding, (float)(instrY + 30)}, 20, 1.2f, GRAY);
+            DrawTextEx(GuiManager::GetCustomFont(), "THIS IS A MODIFICATION OF LUNAR-ENGINE NOT OFFICIAL!", {(float)padding, (float)(instrY + 60)}, 20, 1.2f, GRAY);
+        } else {
+            DrawText("WASD to move, Arrow keys rotate", padding, instrY, 20, GRAY);
+            DrawText("Use UP/DOWN to select, ENTER or (1-4) to confirm", padding, instrY + 30, 20, GRAY);
+            DrawText("THIS IS A MODIFICATION OF LUNAR-ENGINE NOT OFFICIAL!", padding, instrY + 60, 20, GRAY);
+        }
 
         // options start after instructions + adjustable gap
         int baseY = instrY + 45 + instrToOptionsGap;
@@ -85,12 +105,20 @@ static int LoaderMenu(int padding = 38, int gap = 10,
             Color fg = (i == selected) ? YELLOW   : BLACK;
 
             DrawRectangle(padding, y, boxW, boxH, bg);
-            DrawText(TextFormat("(%d) %s", i+1, options[i]),
-                     padding + 15, y + (boxH/2 - 10), 28, fg);
+            if (GuiManager::IsCustomFontLoaded()) {
+                DrawTextEx(GuiManager::GetCustomFont(), options[i], {(float)(padding + 10), (float)(y + 15)}, 20, 1.2f, fg);
+            } else {
+                DrawText(options[i], padding + 10, y + 15, 20, fg);
+            }
         }
 
         int creditsY = baseY + optionCount * (boxH + gap) + 40;
-        DrawText("Made by LunarEngine Developers Modified by nickibreeki", padding, creditsY, 20, RED);
+        if (GuiManager::IsCustomFontLoaded()) {
+            DrawTextEx(GuiManager::GetCustomFont(), "Made by LunarEngine Developers Modified by nickibreeki", 
+                      {(float)padding, (float)creditsY}, 20, 1.2f, RED);
+        } else {
+            DrawText("Made by LunarEngine Developers Modified by nickibreeki", padding, creditsY, 20, RED);
+        }
 
         EndDrawing();
 
@@ -118,6 +146,69 @@ static void LoadAndScheduleScript(const std::string& name, const std::string& pa
     LOGI("Scheduled script: %s", path.c_str());
 }
 
+static std::filesystem::path GetExecutableDirectory() {
+    namespace fs = std::filesystem;
+    
+    #ifdef _WIN32
+    char buffer[MAX_PATH];
+    GetModuleFileNameA(NULL, buffer, MAX_PATH);
+    return fs::path(buffer).parent_path();
+    #else
+    // For other platforms, you might need different implementations
+    return fs::current_path();
+    #endif
+}
+
+static bool Preflight_ValidateResources() {
+    namespace fs = std::filesystem;
+    
+    // Get the directory where the executable is located
+    fs::path executableDir = GetExecutableDirectory();
+    
+    // Check if resources folder exists relative to executable
+    fs::path resourcesPath = executableDir / "resources";
+    if (!fs::exists(resourcesPath)) {
+        LOGE("Resources folder not found at: %s", resourcesPath.string().c_str());
+        LOGE("The application cannot launch without the resources folder.");
+        LOGE("Please ensure the resources folder is in the same directory as the executable.");
+        LOGE("Executable directory: %s", executableDir.string().c_str());
+        
+        // Show error message box on Windows
+        #ifdef _WIN32
+        std::string errorMsg = "Resources folder not found!\n\n"
+                              "The application cannot launch without the resources folder.\n"
+                              "Please ensure the resources folder is in the same directory as the executable.\n\n"
+                              "Executable location: " + executableDir.string() + "\n"
+                              "Looking for: " + resourcesPath.string();
+        MessageBoxA(NULL, errorMsg.c_str(), "Eclipsera Engine - Missing Resources", MB_OK | MB_ICONERROR);
+        #endif
+        
+        return false;
+    }
+    
+    // Check for critical resource files
+    fs::path instanceIconsPath = resourcesPath / "eclipsera-contents" / "textures" / "core" / "instance";
+    if (!fs::exists(instanceIconsPath)) {
+        LOGE("Instance icons folder not found at: %s", instanceIconsPath.string().c_str());
+        LOGE("Critical resource files are missing from the resources folder.");
+        
+        #ifdef _WIN32
+        MessageBoxA(NULL, 
+            "Critical resource files are missing!\n\n"
+            "The instance icons folder was not found in the resources directory.\n"
+            "Please ensure you have the complete resources folder.",
+            "Eclipsera Engine - Incomplete Resources", 
+            MB_OK | MB_ICONWARNING);
+        #endif
+        
+        return false;
+    }
+    
+    LOGI("Resources validation passed");
+    LOGI("Resources found at: %s", resourcesPath.string().c_str());
+    return true;
+}
+
 static bool Preflight_ValidatePaths() {
     if (gPaths.empty()) return true;
     namespace fs = std::filesystem;
@@ -141,13 +232,12 @@ static void Stage_Initialization() {
     InitWindow(1280, 720, "ECLIPSERA ENGINE (LunarEngine 1.0.0 modified)");
 
     // setup icons
-    Image icon = {
-        .data = icon_data,
-        .width = icon_data_width,
-        .height = icon_data_height,
-        .mipmaps = 1,
-        .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
-    };
+    Image icon = {};
+    icon.data = icon_data;
+    icon.width = icon_data_width;
+    icon.height = icon_data_height;
+    icon.mipmaps = 1;
+    icon.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
 
     SetWindowIcon(icon);
     HICON hIcon = CreateIconFromResourceEx(
@@ -176,6 +266,12 @@ static void Stage_Initialization() {
 
     g_game = std::make_shared<Game>();
     g_game->Init();
+
+    // Initialize GUI Manager BEFORE scheduling any scripts
+    // This ensures icons are loaded before scripts start executing
+    g_guiManager = std::make_unique<GuiManager>();
+    g_guiManager->Initialize();
+    LOGI("GUI Manager initialized (icons loaded before scripts)");
 
     // load script if needed
     if (selected > 0) {
@@ -307,42 +403,48 @@ static void Stage_Run() {
             uis->Update();
         }
 
-        // --- Input and camera ---
-        float moveSpeed = 25.0f * dt;
-        float rotSpeed  = 2.0f * dt;
+        // Update TweenService
+        auto tweenService = std::dynamic_pointer_cast<TweenService>(Service::Get("TweenService"));
+        if (tweenService) {
+            tweenService->Update(dt);
+        }
 
-        // yaw/pitch
-        if (IsKeyDown(KEY_RIGHT)) gYaw   += rotSpeed;
-        if (IsKeyDown(KEY_LEFT))  gYaw   -= rotSpeed;
-        if (IsKeyDown(KEY_UP))    gPitch += rotSpeed;
-        if (IsKeyDown(KEY_DOWN))  gPitch -= rotSpeed;
-        const float kMaxPitch = DEG2RAD*89.0f;
-        gPitch = Clamp(gPitch, -kMaxPitch, kMaxPitch);
+        // Update GUI Manager
+        if (g_guiManager) {
+            g_guiManager->Update();
+        }
 
-        // rebuild basis
-        Vector3 forward = {
-            cosf(gPitch)*cosf(gYaw),
-            sinf(gPitch),
-            cosf(gPitch)*sinf(gYaw)
-        };
-        Vector3 worldUp = {0,1,0};
-        Vector3 right   = Vector3CrossProduct(worldUp, forward);
-        if (Vector3LengthSqr(right) < 1e-6f) right = Vector3{1,0,0};
-        right = Vector3Normalize(right);
-        Vector3 up      = Vector3CrossProduct(forward, right);
-
-        // movement
-        Vector3 delta = {0};
-        if (IsKeyDown(KEY_W)) delta = Vector3Add(delta, Vector3Scale(forward, moveSpeed));
-        if (IsKeyDown(KEY_S)) delta = Vector3Subtract(delta, Vector3Scale(forward, moveSpeed));
-        if (IsKeyDown(KEY_D)) delta = Vector3Subtract(delta, Vector3Scale(right,   moveSpeed));
-        if (IsKeyDown(KEY_A)) delta = Vector3Add(delta, Vector3Scale(right,   moveSpeed));
-
-        g_camera.position = Vector3Add(g_camera.position, delta);
-        g_camera.target   = Vector3Add(g_camera.position, forward);
-        g_camera.up       = up;
+        // Update camera from workspace CurrentCamera
+        // put me out of the misery keep messing with this many times now
+        if (g_game && g_game->workspace && g_game->workspace->camera) {
+            auto currentCamera = g_game->workspace->camera;
+            CFrame renderCFrame = currentCamera->GetRenderCFrame();
+            
+            // Convert CFrame to raylib Camera3D
+            g_camera.position = renderCFrame.p.toRay();
+            g_camera.target = Vector3Add(g_camera.position, renderCFrame.lookVector().toRay());
+            g_camera.up = renderCFrame.upVector().toRay();
+            g_camera.fovy = currentCamera->FieldOfView;
+        }
 
         RenderFrame(g_camera);
+        
+        // Render GUI on top of everything
+        if (g_guiManager) {
+            g_guiManager->Render();
+            
+            // Show instruction when GUI is not visible
+            if (!g_guiManager->IsGuiVisible()) {
+                int screenHeight = GetScreenHeight();
+                if (GuiManager::IsCustomFontLoaded()) {
+                    DrawTextEx(GuiManager::GetCustomFont(), "Press '5' five times to open editor", {10, (float)(screenHeight - 30)}, 16, 1, LIGHTGRAY);
+                } else {
+                    DrawText("Press '5' five times to open editor", 10, screenHeight - 30, 16, LIGHTGRAY);
+                }
+            }
+        }
+        
+        EndDrawing();
     }
 
     LOGI("Stage: Run loop end");
@@ -350,6 +452,10 @@ static void Stage_Run() {
 
 static void Cleanup() {
     LOGI("Cleanup begin");
+    if (g_guiManager) {
+        g_guiManager->Shutdown();
+        g_guiManager.reset();
+    }
     if (g_game) {
         g_game->Shutdown();
         g_game.reset();
@@ -380,6 +486,10 @@ int main(int argc, char** argv) {
     }
 
     Stage_ConfigInitialization();
+
+    if (!Preflight_ValidateResources()) {
+        return EXIT_FAILURE; // exit if resources are missing
+    }
 
     if (!Preflight_ValidatePaths()) {
         return EXIT_FAILURE; // print error then exit before window/renderer

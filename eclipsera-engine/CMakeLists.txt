@@ -37,6 +37,8 @@ endif()
 message(STATUS "Found Raylib library: ${RAYLIB_LIB}")
 
 
+
+
 # ---------- Engine exe ----------
 file(GLOB_RECURSE ENGINE_SOURCES
   "${PROJ_ROOT}/bootstrap/*.cpp"
@@ -84,6 +86,22 @@ if(EXISTS "${CONTENT_SRC}")
     DESTINATION .
   )
 endif()
+
+# Install resources folder
+set(RESOURCES_SRC "${PROJ_ROOT}/bootstrap/resources")
+if(EXISTS "${RESOURCES_SRC}")
+  install(DIRECTORY "${RESOURCES_SRC}/"
+    DESTINATION resources
+  )
+endif()
+
+# Copy resources folder to build directory during build
+add_custom_command(TARGET eclipsera-engine POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${RESOURCES_SRC}"
+    "$<TARGET_FILE_DIR:eclipsera-engine>/resources"
+  COMMENT "Copying resources folder to build directory"
+)
 
 # Add version resource on Windows
 if(WIN32)

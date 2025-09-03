@@ -1,7 +1,8 @@
 #pragma once
 #include "lua.h"
-#include "lualib.h"    // Luau’s aux API
+#include "lualib.h"    // Luau's aux API
 #include <new>         // placement new
+#include <cstring>     // For strcmp
 
 namespace lb {
 
@@ -77,14 +78,36 @@ inline void register_type(lua_State* L) {
     }
     lua_pop(L, 1);
 
-    // globals unchanged...
-    lua_newtable(L);
+    // Create global table with metatable for property access
+    lua_newtable(L);                             // global_table
     lua_pushcfunction(L, lb::Traits<T>::Ctor(), "new");
     lua_setfield(L, -2, "new");
+    
+    // Handle statics
     if (const luaL_Reg* s = lb::Traits<T>::Statics()) {
+        // Check if there's an __index metamethod for properties
+        bool has_index = false;
         for (const luaL_Reg* r = s; r && r->name; ++r) {
-            lua_pushcfunction(L, r->func, r->name);
-            lua_setfield(L, -2, r->name);
+            if (strcmp(r->name, "__index") == 0) {
+                has_index = true;
+                break;
+            }
+        }
+        
+        if (has_index) {
+            // Create metatable for the global table
+            lua_newtable(L);                     // global_table, metatable
+            for (const luaL_Reg* r = s; r && r->name; ++r) {
+                lua_pushcfunction(L, r->func, r->name);
+                lua_setfield(L, -2, r->name);
+            }
+            lua_setmetatable(L, -2);             // global_table (with metatable)
+        } else {
+            // Regular static functions
+            for (const luaL_Reg* r = s; r && r->name; ++r) {
+                lua_pushcfunction(L, r->func, r->name);
+                lua_setfield(L, -2, r->name);
+            }
         }
     }
     lua_setglobal(L, lb::Traits<T>::GlobalName());

@@ -1,0 +1,91 @@
+# Simple monkey-like mesh for MeshPart testing
+# Created for Eclipsera Engine MeshPart API
+# Simplified monkey head geometry
+
+# Vertices for monkey head
+# Head base (sphere-like)
+v  0.0  1.0  0.0    # top
+v  0.7  0.7  0.0    # top-right
+v  1.0  0.0  0.0    # right
+v  0.7 -0.7  0.0    # bottom-right
+v  0.0 -1.0  0.0    # bottom
+v -0.7 -0.7  0.0    # bottom-left
+v -1.0  0.0  0.0    # left
+v -0.7  0.7  0.0    # top-left
+
+# Back vertices
+v  0.0  1.0 -0.5    # top back
+v  0.5  0.5 -0.5    # top-right back
+v  0.7  0.0 -0.5    # right back
+v  0.5 -0.5 -0.5    # bottom-right back
+v  0.0 -0.7 -0.5    # bottom back
+v -0.5 -0.5 -0.5    # bottom-left back
+v -0.7  0.0 -0.5    # left back
+v -0.5  0.5 -0.5    # top-left back
+
+# Snout vertices
+v  0.0  0.2  1.2    # snout tip
+v  0.3  0.0  0.8    # snout right
+v  0.0 -0.3  0.8    # snout bottom
+v -0.3  0.0  0.8    # snout left
+
+# Ears
+v  1.2  1.2  0.2    # right ear
+v -1.2  1.2  0.2    # left ear
+
+# Eyes
+v  0.4  0.4  0.6    # right eye
+v -0.4  0.4  0.6    # left eye
+
+# Normals (simplified)
+vn  0.0  0.0  1.0
+vn  0.0  0.0 -1.0
+vn  0.0  1.0  0.0
+vn  0.0 -1.0  0.0
+vn  1.0  0.0  0.0
+vn -1.0  0.0  0.0
+
+# Faces for head (front)
+f 1 2 8
+f 2 3 1
+f 3 4 2
+f 4 5 3
+f 5 6 4
+f 6 7 5
+f 7 8 6
+f 8 1 7
+
+# Faces for head (back)
+f 9 16 10
+f 10 11 9
+f 11 12 10
+f 12 13 11
+f 13 14 12
+f 14 15 13
+f 15 16 14
+f 16 9 15
+
+# Connect front to back
+f 1 9 2
+f 2 9 10
+f 2 10 3
+f 3 10 11
+f 3 11 4
+f 4 11 12
+f 4 12 5
+f 5 12 13
+f 5 13 6
+f 6 13 14
+f 6 14 7
+f 7 14 15
+f 7 15 8
+f 8 15 16
+f 8 16 1
+f 1 16 9
+
+# Snout faces
+f 17 18 3
+f 17 3 2
+f 17 19 18
+f 17 20 19
+f 17 2 20

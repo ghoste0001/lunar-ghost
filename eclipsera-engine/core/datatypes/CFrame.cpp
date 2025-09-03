@@ -5,6 +5,11 @@
 
 using namespace lb;
 
+// ---------- constants ----------
+#ifndef PI
+#define PI 3.14159265358979323846f
+#endif
+
 // ---------- helpers ----------
 static inline float clampf(float x, float a, float b){ return x < a ? a : (x > b ? b : x); }
 static inline float rsqrt(float x){ return 1.0f/std::sqrt(x); }
@@ -14,6 +19,25 @@ CFrame::CFrame(){ R[0]=R[4]=R[8]=1; R[1]=R[2]=R[3]=R[5]=R[6]=R[7]=0; p={0,0,0}; 
 CFrame::CFrame(const Vector3Game& t): CFrame(){ p=t; }
 CFrame::CFrame(float a,float b,float c,float d,float e,float f,float g,float h,float i,const Vector3Game& t){
     R[0]=a;R[1]=b;R[2]=c; R[3]=d;R[4]=e;R[5]=f; R[6]=g;R[7]=h;R[8]=i; p=t;
+}
+
+// Copy constructor
+CFrame::CFrame(const CFrame& other) {
+    for (int i = 0; i < 9; ++i) {
+        R[i] = other.R[i];
+    }
+    p = other.p;
+}
+
+// Assignment operator
+CFrame& CFrame::operator=(const CFrame& other) {
+    if (this != &other) {
+        for (int i = 0; i < 9; ++i) {
+            R[i] = other.R[i];
+        }
+        p = other.p;
+    }
+    return *this;
 }
 
 CFrame CFrame::operator*(const CFrame& B) const {

@@ -41,7 +41,13 @@ void Game::Init() {
     }
 
     // --- Precreate core services under 'game'
-    const char* defaults[] = { "Workspace", "RunService", "Lighting", "UserInputService" };
+    const char* defaults[] = {
+        "Workspace",
+        "RunService",
+        "Lighting",
+        "UserInputService",
+        "TweenService"
+    };
     for (const char* n : defaults) {
         Service::Create(n);
     }

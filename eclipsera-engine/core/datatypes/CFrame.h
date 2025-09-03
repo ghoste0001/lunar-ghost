@@ -17,6 +17,10 @@ struct CFrame {
            float r10,float r11,float r12,
            float r20,float r21,float r22,
            const Vector3Game& pos);
+    
+    // Copy constructor and assignment operator
+    CFrame(const CFrame& other);
+    CFrame& operator=(const CFrame& other);
 
     // --- Operators ---
     CFrame operator*(const CFrame& other) const;       // compose transforms

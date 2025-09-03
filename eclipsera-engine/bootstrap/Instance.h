@@ -19,14 +19,18 @@ enum class InstanceClass {
     Game,
     Workspace,
     Part,
+    MeshPart,
+    Model,
     Script,
     LocalScript,
     Folder,
     Camera,
+    Sky,
     RunService,
     Lighting,
-    Unknown,
     UserInputService,    
+    TweenService,
+    Unknown
 };
 using Attribute = std::variant<bool,double,std::string,::Vector3,::Color>;
 
@@ -135,6 +139,7 @@ public:
     };
 
     static std::shared_ptr<Instance> New(const std::string& typeName);
+    static std::vector<std::string> GetRegisteredTypes();
 
     struct Registrar {
         template <class F>

@@ -1,6 +1,8 @@
 // ================== bootstrap/LuaScheduler.cpp ==================
 #include "bootstrap/LuaScheduler.h"
 #include "bootstrap/instances/BaseScript.h"
+#include "bootstrap/instances/Workspace.h"
+#include "bootstrap/Game.h"
 #include "core/logging/Logging.h"
 
 #include <cstdlib>
@@ -15,6 +17,8 @@
 #include "lualib.h"
 #include "luacode.h"
 #include <limits>
+
+extern std::shared_ptr<Game> g_game;
 
 LuaScheduler::LuaScheduler()
     : sleepingByTime(TimeCmp{&state})
@@ -110,6 +114,34 @@ void LuaScheduler::AddScript(const std::shared_ptr<BaseScript>& script,
                              const GlobalBinder&                binder)
 {
     if (!L_main || !script) return;
+
+    // Detect script type from source code comments
+    RunContext scriptContext = RunContext::Server; // Default to server
+    
+    // Check for script type directives in the first few lines
+    std::string firstLines = source.substr(0, std::min(source.size(), size_t(200)));
+    bool hasClientDirective = firstLines.find("--&clientscript") != std::string::npos;
+    bool hasServerDirective = firstLines.find("--&serverscript") != std::string::npos;
+    
+    if (hasClientDirective) {
+        scriptContext = RunContext::Client;
+        LOGI("Detected client script: %s", name.c_str());
+    } else if (hasServerDirective) {
+        scriptContext = RunContext::Server;
+        LOGI("Detected server script: %s", name.c_str());
+    } else {
+        // ERROR: Script must contain either --&clientscript or --&serverscript
+        LOGE("Script Error: '%s' must contain either '--&clientscript' or '--&serverscript' directive", name.c_str());
+        LOGE("Please add one of these directives at the beginning of your script:");
+        LOGE("  --&clientscript  (for client-side scripts)");
+        LOGE("  --&serverscript  (for server-side scripts)");
+        return; // End task - do not execute the script
+    }
+    
+    // Set the script context in workspace for camera behavior
+    if (g_game && g_game->workspace) {
+        g_game->workspace->SetCurrentScriptContext(scriptContext);
+    }
 
     lua_State* co = lua_newthread(L_main);
     if (!co) {

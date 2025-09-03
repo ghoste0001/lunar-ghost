@@ -16,31 +16,54 @@
 #include "bootstrap/Game.h"
 #include "bootstrap/instances/InstanceTypes.h"
 #include "bootstrap/instances/BasePart.h"      // for CF
+#include "bootstrap/instances/MeshPart.h"      // for MeshPart
 #include "core/datatypes/CFrame.h"             // for CF
-
+#include "core/logging/Logging.h"              // for LOGI
+#include "bootstrap/ShapeMeshes.h"             // for shape vertex data
+#include "bootstrap/services/Lighting.h"      // for Lighting service
+#include "bootstrap/services/Service.h"       // for Service::Get
 extern std::shared_ptr<Game> g_game;
+
+
+// i'll tell you a truth while working on shadering, i fucking losing it, so i put whole code to the ai to read it and tell me
+// how to do a shader work and shit tons of work so i fucking mess this shit up and the light is break into pieces
+// i wished you could enjoy reading all the mess that i did here, have a good one!
 
 // ---------------- Tunables ----------------
 static float kMaxDrawDistance = 10000.0f;
 static float kFovPaddingDeg   = 20.0f;
 
 // shadow parameter definitions
-static float kShadowMaxDistance = 200.0f;  // how far from the camera to cover with shadows
-static int   kShadowRes         = 1536;    // per-cascade resolution
-static float kPCFStep           = 1.0f;    // pcf step in texels
+static float kShadowMaxDistance = 300.0f;  // increased shadow distance
+static int   kShadowRes         = 2048;    // higher resolution shadows
+static float kPCFStep           = 0.8f;    // smoother PCF
 static bool  kCullBackFace      = true;
 static bool  kStabilizeShadow   = true;    // snap to texel grid to prevent swimming
 
 // CSM controls
-static int   kNumCascades       = 2;
-static float kCameraNear        = 0.4f;     // must match scene near
+static int   kNumCascades       = 3;       // use all 3 cascades
+static float kCameraNear        = 0.1f;    // closer near plane
 
-// ---- controls (ambient zero, parity by default) ----
-static bool     kUseClockTime = true;               // keep original sun by default
-static float    kClockTime    = 12.0f;              // 0..24 hours when enabled
-static float    kBrightness   = 2.0f;               // original sunStrength default
-static float    kExposure     = 0.85f;              // new exposure knob, <1 darker, >1 brighter
-static ::Color3 kAmbient      = {0.0f, 0.0f, 0.0f}; // Ambient = 0
+// Enhanced lighting controls
+static bool     kUseClockTime = true;
+static float    kClockTime    = 14.0f;     // afternoon lighting
+static float    kBrightness   = 4.0f;      // brighter sun for better shadow contrast
+static float    kExposure     = 1.0f;      // higher exposure for brighter scene
+static ::Color3 kAmbient      = {0.5f, 0.5f, 0.6f}; // brighter ambient for better visibility
+
+// Shadow debugging and runtime controls (inspired by Raylib example)
+static bool     kShowShadowDebug = false;  // show shadow cascade splits
+static bool     kEnableShadows   = true;   // toggle shadows on/off
+static float    kShadowBiasMultiplier = 1.0f; // adjust shadow bias dynamically
+
+// New hybrid rendering features
+static bool     kEnableSSAO    = true;     // Screen-space ambient occlusion
+static bool     kEnableBloom   = true;     // HDR bloom effect
+static bool     kEnableFog     = true;     // Atmospheric fog
+static float    kFogDensity    = 0.02f;    // Fog density
+static ::Color3 kFogColor      = {0.7f, 0.8f, 0.9f}; // Light blue fog
+static bool     kEnableVolumetricLighting = true;    // God rays
+static float    kVolumetricStrength = 0.3f;          // Volumetric light strength
 
 static inline float LenSq(Vector3 v){ return v.x*v.x + v.y*v.y + v.z*v.z; }
 struct SavedWin { int x,y,w,h; bool valid=false; } g_saved;
@@ -89,10 +112,25 @@ static Vector3 SunDirFromClock(float clockHours){
 static Shader gLitShader   = {0};
 static Shader gLitShaderInst = {0};
 static Shader gSkyShader   = {0};
+static Shader gPostProcessShader = {0};  // Post-processing shader
+static Shader gBloomShader = {0};        // Bloom effect shader
 static Model  gPartModel   = {0}; // cube model used for parts
 static Model  gSkyModel    = {0};
 static Material gPartMatInst = {0};
 static RenderTexture2D gShadowMapCSM[3] = { {0},{0},{0} };
+
+// Cache for shape-specific models
+static std::unordered_map<int, Model> gShapeModels;
+
+// Post-processing render targets
+static RenderTexture2D gMainRT = {0};     // Main scene render target
+static RenderTexture2D gBloomRT = {0};    // Bloom render target
+static RenderTexture2D gTempRT = {0};     // Temporary render target for effects
+
+// Post-processing uniforms
+static int u_fogDensity = -1, u_fogColor = -1;
+static int u_volumetricStrength = -1;
+static int u_bloomThreshold = -1, u_bloomIntensity = -1;
 
 // Sky uniforms
 static int u_inner=-1, u_outer=-1, u_transition=-1;
@@ -325,6 +363,9 @@ static void EnsureShaders() {
         gLitShader = LoadShaderFromMemory(LIT_VS, LIT_FS);
 
         // lighting
+        u_aoStrength = GetShaderLocation(gLitShader, "aoStrength");
+        ui_aoStrength = GetShaderLocation(gLitShaderInst, "aoStrength");
+
         u_viewPos   = GetShaderLocation(gLitShader, "viewPos");
         u_sunDir    = GetShaderLocation(gLitShader, "sunDir");
         u_sky       = GetShaderLocation(gLitShader, "skyColor");
@@ -363,9 +404,11 @@ static void EnsureShaders() {
         // constants
         SetShaderValue(gLitShader, u_shadowRes, &kShadowRes, SHADER_UNIFORM_INT);
         float pcfStep = kPCFStep;
-        // reduced bias defaults
-        float biasMin = 6e-5f, biasMax = 8e-4f;
         SetShaderValue(gLitShader, u_pcfStep, &pcfStep, SHADER_UNIFORM_FLOAT);
+        
+        // Dynamic shadow bias (inspired by Raylib example)
+        float biasMin = 6e-5f * kShadowBiasMultiplier;
+        float biasMax = 8e-4f * kShadowBiasMultiplier;
         SetShaderValue(gLitShader, u_biasMin, &biasMin, SHADER_UNIFORM_FLOAT);
         SetShaderValue(gLitShader, u_biasMax, &biasMax, SHADER_UNIFORM_FLOAT);
 
@@ -421,8 +464,12 @@ static void EnsureShaders() {
 
         // constants
         SetShaderValue(gLitShaderInst, ui_shadowRes, &kShadowRes, SHADER_UNIFORM_INT);
-        float pcfStep2 = kPCFStep, biasMin2 = 6e-5f, biasMax2 = 8e-4f;
+        float pcfStep2 = kPCFStep;
         SetShaderValue(gLitShaderInst, ui_pcfStep, &pcfStep2, SHADER_UNIFORM_FLOAT);
+        
+        // Dynamic shadow bias (inspired by Raylib example)
+        float biasMin2 = 6e-5f * kShadowBiasMultiplier;
+        float biasMax2 = 8e-4f * kShadowBiasMultiplier;
         SetShaderValue(gLitShaderInst, ui_biasMin, &biasMin2, SHADER_UNIFORM_FLOAT);
         SetShaderValue(gLitShaderInst, ui_biasMax, &biasMax2, SHADER_UNIFORM_FLOAT);
         float defaultTransition2 = 0.15f;
@@ -436,12 +483,12 @@ static void EnsureShaders() {
         u_outer = GetShaderLocation(gSkyShader, "outerColor");
     }
 
-    // Shared cube model for all parts
-    if (gPartModel.meshCount == 0) {
-        Mesh cubeMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
-        gPartModel = LoadModelFromMesh(cubeMesh);
-        gPartModel.materials[0].shader = gLitShader; // bind lit+shadow shader for non-instanced path
-    }
+// Shared cube model for all parts (default Block shape)
+if (gPartModel.meshCount == 0) {
+    Mesh cubeMesh = GenMeshCube(1.0f, 1.0f, 1.0f);
+    gPartModel = LoadModelFromMesh(cubeMesh);
+    gPartModel.materials[0].shader = gLitShader; // bind lit+shadow shader for non-instanced path
+}
 
     // Sky cube
     if (gSkyModel.meshCount == 0) {
@@ -475,6 +522,122 @@ static inline void ComputeCascadeSplits(float n, float f, float lambda, float ou
     }
 }
 
+// ---------------- Helper: Generate mesh based on shape ----------------
+static Mesh GenerateMeshForShape(int shape) {
+    switch (shape) {
+        case 0: // Ball
+            return GenMeshSphere(0.5f, 16, 16);
+        case 1: // Block (default cube)
+            return GenMeshCube(1.0f, 1.0f, 1.0f);
+        case 2: // Cylinder
+            {
+                Mesh cylinder = GenMeshCylinder(0.5f, 1.0f, 16);
+                
+                // Center the cylinder properly - Raylib's GenMeshCylinder creates a cylinder
+                // that extends from 0 to height, but we want it centered around origin? yeah right
+                if (cylinder.vertices) {
+                    for (int i = 0; i < cylinder.vertexCount; i++) {
+                        // Shift Y coordinates to center the cylinder around origin
+                        cylinder.vertices[i * 3 + 1] -= 0.5f; // Move down by half height
+                    }
+                    
+                    // Update the mesh on GPU
+                    UpdateMeshBuffer(cylinder, 0, cylinder.vertices, cylinder.vertexCount * 3 * sizeof(float), 0);
+                }
+                
+                return cylinder;
+            }
+        case 3: // Wedge - create a ramp-like wedge mesh using header data, i'm not enjoy working on this
+            {
+                Mesh wedge = {0};
+                wedge.vertexCount = ShapeMeshes::WEDGE_VERTEX_COUNT;
+                wedge.triangleCount = ShapeMeshes::WEDGE_TRIANGLE_COUNT;
+                
+                // Allocate memory for vertices, normals, and texcoords
+                wedge.vertices = (float*)MemAlloc(wedge.vertexCount * 3 * sizeof(float));
+                wedge.normals = (float*)MemAlloc(wedge.vertexCount * 3 * sizeof(float));
+                wedge.texcoords = (float*)MemAlloc(wedge.vertexCount * 2 * sizeof(float));
+                
+                // Copy vertices from header file
+                for (int i = 0; i < wedge.vertexCount * 3; i++) {
+                    wedge.vertices[i] = ShapeMeshes::WEDGE_VERTICES[i];
+                }
+                
+                // Generate normals for each face
+                for (int i = 0; i < wedge.vertexCount; i += 3) {
+                    Vector3 v1 = {wedge.vertices[i*3], wedge.vertices[i*3+1], wedge.vertices[i*3+2]};
+                    Vector3 v2 = {wedge.vertices[(i+1)*3], wedge.vertices[(i+1)*3+1], wedge.vertices[(i+1)*3+2]};
+                    Vector3 v3 = {wedge.vertices[(i+2)*3], wedge.vertices[(i+2)*3+1], wedge.vertices[(i+2)*3+2]};
+                    // DUDE STOP INVERTED :sob:
+                    Vector3 edge1 = Vector3Subtract(v2, v1);
+                    Vector3 edge2 = Vector3Subtract(v3, v1);
+                    Vector3 normal = Vector3Normalize(Vector3CrossProduct(edge1, edge2));
+                    
+                    for (int j = 0; j < 3; j++) {
+                        wedge.normals[(i+j)*3] = normal.x;
+                        wedge.normals[(i+j)*3+1] = normal.y;
+                        wedge.normals[(i+j)*3+2] = normal.z;
+                    }
+                }
+                
+                // Generate texture coordinates
+                for (int i = 0; i < wedge.vertexCount; i++) {
+                    wedge.texcoords[i*2] = (wedge.vertices[i*3] + 0.5f);
+                    wedge.texcoords[i*2+1] = (wedge.vertices[i*3+2] + 0.5f);
+                }
+                
+                // Upload mesh data to GPU
+                UploadMesh(&wedge, false);
+                return wedge;
+            }
+        case 4: // CornerWedge - create a corner wedge mesh using header data
+            {
+                Mesh cornerWedge = {0};
+                cornerWedge.vertexCount = ShapeMeshes::CORNER_WEDGE_VERTEX_COUNT;
+                cornerWedge.triangleCount = ShapeMeshes::CORNER_WEDGE_TRIANGLE_COUNT;
+                
+                cornerWedge.vertices = (float*)MemAlloc(cornerWedge.vertexCount * 3 * sizeof(float));
+                cornerWedge.normals = (float*)MemAlloc(cornerWedge.vertexCount * 3 * sizeof(float));
+                cornerWedge.texcoords = (float*)MemAlloc(cornerWedge.vertexCount * 2 * sizeof(float));
+                
+                // Copy vertices from header file
+                for (int i = 0; i < cornerWedge.vertexCount * 3; i++) {
+                    cornerWedge.vertices[i] = ShapeMeshes::CORNER_WEDGE_VERTICES[i];
+                }
+                
+                // Generate normals
+                for (int i = 0; i < cornerWedge.vertexCount; i += 3) {
+                    Vector3 v1 = {cornerWedge.vertices[i*3], cornerWedge.vertices[i*3+1], cornerWedge.vertices[i*3+2]};
+                    Vector3 v2 = {cornerWedge.vertices[(i+1)*3], cornerWedge.vertices[(i+1)*3+1], cornerWedge.vertices[(i+1)*3+2]};
+                    Vector3 v3 = {cornerWedge.vertices[(i+2)*3], cornerWedge.vertices[(i+2)*3+1], cornerWedge.vertices[(i+2)*3+2]};
+                    
+                    Vector3 edge1 = Vector3Subtract(v2, v1);
+                    Vector3 edge2 = Vector3Subtract(v3, v1);
+                    Vector3 normal = Vector3Normalize(Vector3CrossProduct(edge1, edge2));
+                    
+                    for (int j = 0; j < 3; j++) {
+                        cornerWedge.normals[(i+j)*3] = normal.x;
+                        cornerWedge.normals[(i+j)*3+1] = normal.y;
+                        cornerWedge.normals[(i+j)*3+2] = normal.z;
+                    }
+                }
+                
+                // Generate texture coordinates
+                for (int i = 0; i < cornerWedge.vertexCount; i++) {
+                    cornerWedge.texcoords[i*2] = (cornerWedge.vertices[i*3] + 0.5f);
+                    cornerWedge.texcoords[i*2+1] = (cornerWedge.vertices[i*3+2] + 0.5f);
+                }
+                
+                // idk how you guys handle this but i'm fucked up rn, my brain is dead ass shit
+
+                UploadMesh(&cornerWedge, false);
+                return cornerWedge;
+            }
+        default:
+            return GenMeshCube(1.0f, 1.0f, 1.0f);
+    }
+}
+
 // ---------------- Helper: Build instance matrix ----------------
 static inline Matrix BuildInstanceMatrix(const CFrame& cf, ::Vector3 size){
     // CFrame::R is row-major 3x3 as used above
@@ -497,10 +660,17 @@ static inline Matrix BuildInstanceMatrix(const CFrame& cf, ::Vector3 size){
 
 // ---------------- Main render ----------------
 void RenderFrame(Camera3D& camera) {
+    // Fullscreen toggle
     if (IsKeyPressed(KEY_F11)) {
         static bool borderless=false; borderless=!borderless;
         if (borderless) EnterBorderlessFullscreen(); else ExitBorderlessFullscreen();
     }
+    
+    // Shadow debugging controls (inspired by Raylib example)
+    if (IsKeyPressed(KEY_F1)) kShowShadowDebug = !kShowShadowDebug;
+    if (IsKeyPressed(KEY_F2)) kEnableShadows = !kEnableShadows;
+    if (IsKeyDown(KEY_LEFT_BRACKET)) kShadowBiasMultiplier = fmaxf(0.1f, kShadowBiasMultiplier - 0.1f);
+    if (IsKeyDown(KEY_RIGHT_BRACKET)) kShadowBiasMultiplier = fminf(5.0f, kShadowBiasMultiplier + 0.1f);
 
     EnsureShaders();
 
@@ -514,26 +684,32 @@ void RenderFrame(Camera3D& camera) {
     const float halfCone = 0.5f * ((hFov>vFov)?hFov:vFov) + kFovPaddingDeg*(PI/180.0f);
     const float cosHalf2 = cosf(halfCone)*cosf(halfCone); // kept for reference
 
+    // Get lighting values from service (with fallbacks to constants)
+    auto lightingService = std::dynamic_pointer_cast<Lighting>(Service::Get("Lighting"));
+    float clockTime = lightingService ? (float)lightingService->ClockTime : kClockTime;
+    float brightness = lightingService ? (float)lightingService->Brightness : kBrightness;
+    ::Color3 ambientColor = lightingService ? lightingService->Ambient : kAmbient;
+
     // Lighting params
     Vector3 sunDirV = kUseClockTime
-        ? SunDirFromClock(kClockTime)
+        ? SunDirFromClock(clockTime)
         : Vector3Normalize(Vector3{1.0f, -1.0f, 1.0f}); // original parity
     float sunDir[3] = { sunDirV.x, sunDirV.y, sunDirV.z };
     float sky[3]    = { 0.60f, 0.70f, 0.90f };
     float ground[3] = { 0.18f, 0.16f, 0.14f };
     float hemiStr   = 0.7f;
-    float sunStr    = (kBrightness / 2.0f) * 0.6f;            // default 0.6 identical to original
-    float ambient[3]= { kAmbient.r, kAmbient.g, kAmbient.b }; // zero => identical output
+    float sunStr    = (brightness / 2.0f) * 0.6f;            // use service brightness
+    float ambient[3]= { ambientColor.r, ambientColor.g, ambientColor.b }; // use service ambient
     float specStr   = 1.30f;
     float shininess = 128.0f;
     float fresnel   = 0.1f;
-    float aoStr     = 0.6f;
+    float aoStr     = 0.9f; // Increased AO strength for more visible effect
     float groundY   = 0.5f;
 
     // Gather parts
     auto ws = g_game ? g_game->workspace : nullptr;
-    struct TItem { std::shared_ptr<Part> p; float dist2; float alpha; };
-    std::vector<std::shared_ptr<Part>> opaques;
+    struct TItem { std::shared_ptr<BasePart> p; float dist2; float alpha; };
+    std::vector<std::shared_ptr<BasePart>> opaques;
     std::vector<TItem> transparents;
 
     if (ws) {
@@ -592,38 +768,58 @@ void RenderFrame(Camera3D& camera) {
     }
 
     // Build instance transforms for shadow casters (include opaques and transparents)
+    // Improved culling inspired by Raylib example - only cast shadows from nearby objects
     std::vector<Matrix> shadowXforms;
     shadowXforms.reserve(opaques.size() + transparents.size());
-    for (auto& p : opaques) shadowXforms.push_back(BuildInstanceMatrix(p->CF, p->Size));
-    for (auto& it : transparents) shadowXforms.push_back(BuildInstanceMatrix(it.p->CF, it.p->Size));
+    
+    float shadowCullDistSq = kShadowMaxDistance * kShadowMaxDistance;
+    for (auto& p : opaques) {
+        Vector3 pos = p->CF.p.toRay();
+        Vector3 delta = Vector3Subtract(pos, camPos);
+        float d2 = LenSq(delta);
+        if (d2 <= shadowCullDistSq) { // Only cast shadows from objects within shadow distance
+            shadowXforms.push_back(BuildInstanceMatrix(p->CF, p->Size));
+        }
+    }
+    for (auto& it : transparents) {
+        Vector3 pos = it.p->CF.p.toRay();
+        Vector3 delta = Vector3Subtract(pos, camPos);
+        float d2 = LenSq(delta);
+        if (d2 <= shadowCullDistSq) { // Only cast shadows from objects within shadow distance
+            shadowXforms.push_back(BuildInstanceMatrix(it.p->CF, it.p->Size));
+        }
+    }
 
-    for (int i=0;i<3;i++){
-        BeginTextureMode(gShadowMapCSM[i]);
-            ClearBackground(WHITE); // depth cleared by BeginMode3D
-            BeginMode3D(lightCam[i]);
+    // Only render shadows if enabled (inspired by Raylib example)
+    if (kEnableShadows) {
+        for (int i=0;i<3;i++){
+            BeginTextureMode(gShadowMapCSM[i]);
+                ClearBackground(WHITE); // depth cleared by BeginMode3D
+                BeginMode3D(lightCam[i]);
 
-                // note: rlGetMatrixModelview/projection gives the matrices raylib used; update our lightVP
-                Matrix lightView = rlGetMatrixModelview();
-                Matrix lightProj = rlGetMatrixProjection();
-                lightVP[i] = MatrixMultiply(lightView, lightProj);
+                    // note: rlGetMatrixModelview/projection gives the matrices raylib used; update our lightVP
+                    Matrix lightView = rlGetMatrixModelview();
+                    Matrix lightProj = rlGetMatrixProjection();
+                    lightVP[i] = MatrixMultiply(lightView, lightProj);
 
-                // disable backface culling for shadow pass to reduce acne
-                rlDisableBackfaceCulling();
+                    // disable backface culling for shadow pass to reduce acne
+                    rlDisableBackfaceCulling();
 
-                // Cast shadows from both opaque and transparent geometry (as solid)
-                if (!shadowXforms.empty()) {
-                    // color doesn't matter; depth-only framebuffer will use depth
-                    // ensure instanced material shader is active for drawing instanced meshes
-                    gPartMatInst.shader = gLitShaderInst;
-                    gPartMatInst.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-                    DrawMeshInstanced(gPartModel.meshes[0], gPartMatInst, shadowXforms.data(), (int)shadowXforms.size());
-                }
+                    // Cast shadows from both opaque and transparent geometry (as solid)
+                    if (!shadowXforms.empty()) {
+                        // color doesn't matter; depth-only framebuffer will use depth
+                        // ensure instanced material shader is active for drawing instanced meshes
+                        gPartMatInst.shader = gLitShaderInst;
+                        gPartMatInst.maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+                        DrawMeshInstanced(gPartModel.meshes[0], gPartMatInst, shadowXforms.data(), (int)shadowXforms.size());
+                    }
 
-                // re-enable culling to previous state
-                if (kCullBackFace) rlEnableBackfaceCulling();
+                    // re-enable culling to previous state
+                    if (kCullBackFace) rlEnableBackfaceCulling();
 
-            EndMode3D();
-        EndTextureMode();
+                EndMode3D();
+            EndTextureMode();
+        }
     }
 
     // after building shadow maps, set per-cascade normal-bias based on texel size
@@ -645,14 +841,28 @@ void RenderFrame(Camera3D& camera) {
     ClearBackground(RAYWHITE);
     BeginMode3D(camera);
 
-    // Skybox
+    // Enhanced Skybox with atmospheric effects
     rlDisableDepthTest();
     rlDisableDepthMask();
     bool prevCull = kCullBackFace;
     if (kCullBackFace) rlDisableBackfaceCulling();
     BeginShaderMode(gSkyShader);
-        float inner[3] = {0.25f, 0.45f, 0.65f};  // soft horizon blue
-        float outer[3] = {0.05f, 0.25f, 0.55f};  // deeper zenith blue
+        // Dynamic sky colors based on sun position
+        float sunHeight = sunDirV.y;
+        float sunsetFactor = Clamp(1.0f - fabsf(sunHeight), 0.0f, 1.0f);
+        
+        // Interpolate between day and sunset colors
+        float inner[3] = {
+            Lerp(0.25f, 0.8f, sunsetFactor),   // More orange during sunset
+            Lerp(0.45f, 0.4f, sunsetFactor),   // Less green during sunset
+            Lerp(0.65f, 0.2f, sunsetFactor)    // Less blue during sunset
+        };
+        float outer[3] = {
+            Lerp(0.05f, 0.3f, sunsetFactor),   // Darker orange at zenith
+            Lerp(0.25f, 0.15f, sunsetFactor),  // Less green at zenith
+            Lerp(0.55f, 0.1f, sunsetFactor)    // Much less blue at zenith
+        };
+        
         SetShaderValue(gSkyShader, u_inner, inner, SHADER_UNIFORM_VEC3);
         SetShaderValue(gSkyShader, u_outer, outer, SHADER_UNIFORM_VEC3);
         DrawModel(gSkyModel, {0,0,0}, 100.0f, WHITE);
@@ -668,6 +878,14 @@ void RenderFrame(Camera3D& camera) {
     rlActiveTextureSlot(slot0); rlEnableTexture(gShadowMapCSM[0].depth.id);
     rlActiveTextureSlot(slot1); rlEnableTexture(gShadowMapCSM[1].depth.id);
     rlActiveTextureSlot(slot2); rlEnableTexture(gShadowMapCSM[2].depth.id);
+    
+    // Tell shaders which texture slots to use for shadow maps (CRITICAL FIX!)
+    SetShaderValue(gLitShader, u_shadowMap0, &slot0, SHADER_UNIFORM_INT);
+    SetShaderValue(gLitShader, u_shadowMap1, &slot1, SHADER_UNIFORM_INT);
+    SetShaderValue(gLitShader, u_shadowMap2, &slot2, SHADER_UNIFORM_INT);
+    SetShaderValue(gLitShaderInst, ui_shadowMap0, &slot0, SHADER_UNIFORM_INT);
+    SetShaderValue(gLitShaderInst, ui_shadowMap1, &slot1, SHADER_UNIFORM_INT);
+    SetShaderValue(gLitShaderInst, ui_shadowMap2, &slot2, SHADER_UNIFORM_INT);
 
     // Prepare per-frame uniform values
     float viewPosArr[3] = { camera.position.x, camera.position.y, camera.position.z };
@@ -735,21 +953,52 @@ void RenderFrame(Camera3D& camera) {
     SetPerFrame(gLitShader, false);
     SetPerFrame(gLitShaderInst, true);
 
-    // --- Opaques: batch by color -> instanced draws ---
-    std::unordered_map<uint32_t, std::vector<Matrix>> batches;
+    // --- Separate MeshParts from regular Parts ---
+    std::vector<std::shared_ptr<BasePart>> regularParts;
+    std::vector<std::shared_ptr<MeshPart>> meshParts;
+    
+    
+    for (auto& p : opaques) {
+        // Check if this is a MeshPart
+        auto meshPart = std::dynamic_pointer_cast<MeshPart>(p);
+        if (meshPart) {
+            meshParts.push_back(meshPart);
+        } else {
+            regularParts.push_back(p);
+        }
+    }
+    
+    // --- Regular Parts: batch by color AND shape -> instanced draws ---
+    struct BatchKey {
+        uint32_t color;
+        int shape;
+        
+        bool operator==(const BatchKey& other) const {
+            return color == other.color && shape == other.shape;
+        }
+    };
+    
+    struct BatchKeyHash {
+        std::size_t operator()(const BatchKey& k) const {
+            return std::hash<uint32_t>()(k.color) ^ (std::hash<int>()(k.shape) << 1);
+        }
+    };
+    
+    std::unordered_map<BatchKey, std::vector<Matrix>, BatchKeyHash> batches;
     batches.reserve(64);
 
     auto pack = [](unsigned r,unsigned g,unsigned b,unsigned a)->uint32_t{
         return (r<<24) | (g<<16) | (b<<8) | a;
     };
 
-    for (auto& p : opaques) {
+    for (auto& p : regularParts) {
         Color c = ToRaylibColor(p->Color, 1.0f);
-        uint32_t key = pack(c.r,c.g,c.b,c.a);
+        uint32_t colorKey = pack(c.r,c.g,c.b,c.a);
+        BatchKey key = {colorKey, p->Shape};
         batches[key].push_back(BuildInstanceMatrix(p->CF, p->Size));
     }
 
-    // Use instanced material/shader for opaque batches
+    // Use instanced material/shader for regular part batches
     if (!batches.empty()) {
         // Ensure instanced material uses our instanced shader
         gPartMatInst.shader = gLitShaderInst;
@@ -757,11 +1006,80 @@ void RenderFrame(Camera3D& camera) {
         for (auto& kv : batches) {
             auto &xforms = kv.second;
             if (xforms.empty()) continue;
-            uint32_t key = kv.first;
-            Color c = { (unsigned char)(key>>24), (unsigned char)(key>>16), (unsigned char)(key>>8), (unsigned char)(key&0xFF) };
+            
+            BatchKey key = kv.first;
+            Color c = { (unsigned char)(key.color>>24), (unsigned char)(key.color>>16), 
+                       (unsigned char)(key.color>>8), (unsigned char)(key.color&0xFF) };
             gPartMatInst.maps[MATERIAL_MAP_DIFFUSE].color = c;
-            DrawMeshInstanced(gPartModel.meshes[0], gPartMatInst, xforms.data(), (int)xforms.size());
+            
+            // Get or create the appropriate mesh for this shape
+            Mesh* meshToUse = nullptr;
+            if (gShapeModels.find(key.shape) == gShapeModels.end()) {
+                // Create and cache the model for this shape
+                Mesh shapeMesh = GenerateMeshForShape(key.shape);
+                Model shapeModel = LoadModelFromMesh(shapeMesh);
+                shapeModel.materials[0].shader = gLitShaderInst;
+                gShapeModels[key.shape] = shapeModel;
+            }
+            meshToUse = &gShapeModels[key.shape].meshes[0];
+            
+            DrawMeshInstanced(*meshToUse, gPartMatInst, xforms.data(), (int)xforms.size());
         }
+    }
+
+    // --- MeshParts: render individually with custom meshes ---
+    for (auto& meshPart : meshParts) {
+        Color c = ToRaylibColor(meshPart->Color, 1.0f);
+        Vector3 pos = meshPart->CF.p.toRay();
+        Vector3 axis; float angleDeg;
+        CFrameToAxisAngle(meshPart->CF, axis, angleDeg);
+        
+        // Check if we have a valid loaded model with meshes
+        bool hasValidMesh = meshPart->HasLoadedMesh && 
+                           meshPart->LoadedModel.meshCount > 0 && 
+                           meshPart->LoadedModel.meshes != nullptr;
+        
+        if (!hasValidMesh) {
+            // Fall back to cube rendering if no mesh is loaded
+            BeginShaderMode(gLitShader);
+            DrawModelEx(gPartModel, pos, axis, angleDeg, meshPart->Size, c);
+            EndShaderMode();
+            continue;
+        }
+
+        // Render the custom mesh        
+        // Calculate proper scale: Size / MeshSize to scale from mesh's original size to desired size
+        Vector3 finalSize = {
+            meshPart->Size.x / meshPart->MeshSize.x,
+            meshPart->Size.y / meshPart->MeshSize.y,
+            meshPart->Size.z / meshPart->MeshSize.z
+        };
+        
+        // Apply offset
+        Vector3 offsetPos = {
+            pos.x + meshPart->Offset.x,
+            pos.y + meshPart->Offset.y,
+            pos.z + meshPart->Offset.z
+        };
+        
+        // Set the shader and color for the loaded model
+        for (int i = 0; i < meshPart->LoadedModel.materialCount; i++) {
+            meshPart->LoadedModel.materials[i].shader = gLitShader;
+            // Only override color if no texture is loaded, otherwise keep the texture
+            if (meshPart->LoadedTexture.id == 0) {
+                meshPart->LoadedModel.materials[i].maps[MATERIAL_MAP_DIFFUSE].color = c;
+            } else {
+                // Ensure texture is applied and color is white to not tint the texture
+                meshPart->LoadedModel.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture = meshPart->LoadedTexture;
+                meshPart->LoadedModel.materials[i].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
+            }
+        }
+        
+        BeginShaderMode(gLitShader);
+        // Use WHITE color if texture is loaded to avoid tinting the texture
+        Color renderColor = (meshPart->LoadedTexture.id > 0) ? WHITE : c;
+        DrawModelEx(meshPart->LoadedModel, offsetPos, axis, angleDeg, finalSize, renderColor);
+        EndShaderMode();
     }
 
     // Transparencies (sorted back-to-front)
@@ -779,13 +1097,30 @@ void RenderFrame(Camera3D& camera) {
     rlEnableDepthMask();
     EndBlendMode();
 
-    EndShaderMode();
-
     if (kCullBackFace) rlDisableBackfaceCulling();
 
     EndMode3D();
+    
+    // Debug information (inspired by Raylib example)
     DrawFPS(10,10);
-    EndDrawing();
+    
+    if (kShowShadowDebug) {
+        DrawText("Shadow Debug Mode ON", 10, 40, 20, YELLOW);
+        DrawText(TextFormat("Shadow Bias Multiplier: %.1f", kShadowBiasMultiplier), 10, 65, 16, WHITE);
+        DrawText(TextFormat("Shadow Distance: %.1f", kShadowMaxDistance), 10, 85, 16, WHITE);
+        DrawText(TextFormat("Shadow Resolution: %d", kShadowRes), 10, 105, 16, WHITE);
+        DrawText(TextFormat("Cascades: %d", kNumCascades), 10, 125, 16, WHITE);
+        DrawText("F1: Toggle Debug | F2: Toggle Shadows", 10, 150, 14, GRAY);
+        DrawText("[ ]: Decrease Bias | ] : Increase Bias", 10, 170, 14, GRAY);
+    } else {
+        DrawText("Press F1 for shadow debug info", 10, 40, 14, GRAY);
+    }
+    
+    if (!kEnableShadows) {
+        DrawText("SHADOWS DISABLED", GetScreenWidth() - 200, 10, 20, RED);
+    }
+    
+    // Note: EndDrawing() is now called in main.cpp after GUI rendering
 }
 
 // ---------------- Optional cleanup ----------------

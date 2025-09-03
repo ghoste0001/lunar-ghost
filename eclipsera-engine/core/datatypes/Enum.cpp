@@ -138,10 +138,52 @@ void EnumRegistry::InitializeBuiltinEnums() {
     keyCode->AddItem("RightControl", 48);
     keyCode->AddItem("LeftAlt", 49);
     keyCode->AddItem("RightAlt", 50);
-    keyCode->AddItem("MouseButton1", 51);
-    keyCode->AddItem("MouseButton2", 52);
-    keyCode->AddItem("MouseButton3", 53);
     RegisterEnum("KeyCode", keyCode);
+    
+    // MouseButton enum
+    Enum* mouseButton = new Enum("MouseButton");
+    mouseButton->AddItem("MouseButton1", 1);  // Left mouse button
+    mouseButton->AddItem("MouseButton2", 2);  // Right mouse button
+    mouseButton->AddItem("MouseButton3", 3);  // Middle mouse button
+    RegisterEnum("MouseButton", mouseButton);
+    
+    // EasingStyle enum
+    Enum* easingStyle = new Enum("EasingStyle");
+    easingStyle->AddItem("Linear", 0);
+    easingStyle->AddItem("Sine", 1);
+    easingStyle->AddItem("Back", 2);
+    easingStyle->AddItem("Quad", 3);
+    easingStyle->AddItem("Quart", 4);
+    easingStyle->AddItem("Quint", 5);
+    easingStyle->AddItem("Bounce", 6);
+    easingStyle->AddItem("Elastic", 7);
+    easingStyle->AddItem("Exponential", 8);
+    easingStyle->AddItem("Circular", 9);
+    easingStyle->AddItem("Cubic", 10);
+    RegisterEnum("EasingStyle", easingStyle);
+    
+    // EasingDirection enum
+    Enum* easingDirection = new Enum("EasingDirection");
+    easingDirection->AddItem("In", 0);
+    easingDirection->AddItem("Out", 1);
+    easingDirection->AddItem("InOut", 2);
+    RegisterEnum("EasingDirection", easingDirection);
+    
+    // MouseBehavior enum
+    Enum* mouseBehavior = new Enum("MouseBehavior");
+    mouseBehavior->AddItem("Default", 0);
+    mouseBehavior->AddItem("LockCenter", 1);
+    mouseBehavior->AddItem("LockCurrentPosition", 2);
+    RegisterEnum("MouseBehavior", mouseBehavior);
+    
+    // PartType enum
+    Enum* partType = new Enum("PartType");
+    partType->AddItem("Ball", 0);
+    partType->AddItem("Block", 1);
+    partType->AddItem("Cylinder", 2);
+    partType->AddItem("Wedge", 3);
+    partType->AddItem("CornerWedge", 4);
+    RegisterEnum("PartType", partType);
 }
 
 // Lua helper functions

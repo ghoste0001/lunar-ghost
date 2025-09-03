@@ -26,10 +26,16 @@ struct BasePart : Instance {
     float Elasticity{0.5f};
 
     Color3 Color{0.63f, 0.63f, 0.63f}; // default white
+    
+    // Shape property - 0=Ball, 1=Block, 2=Cylinder, 3=Wedge, 4=CornerWedge
+    int Shape{1}; // Default to Block
 
     BasePart(std::string name, InstanceClass cls);
     ~BasePart() override;
 
     bool LuaGet(lua_State* L, const char* key) const override;
     bool LuaSet(lua_State* L, const char* key, int valueIndex) override;
+    
+    // Helper method to apply shape constraints to size
+    void ApplyShapeConstraints();
 };
