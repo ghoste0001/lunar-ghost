@@ -1,16 +1,15 @@
 <img src="/repo/IconNLabelCompressed.svg" width="512"/>
 
-# ECLIPSERA ENGINE
+# ECLIPSERA ENGINE (DEPRECATED)
 Eclipsera Engine is a modified version of [LunarEngine](https://github.com/lunarengine/lunar-test), designed to include features that the original project currently lacks. This engine is built using ROBLOX's Luau and aims to support the full range of Roblox APIs for game development. and Freedom of Game Development
-
-<a href="https://www.buymeacoffee.com/nickibreeki" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## **PRONOUNCIATION**
 E-CLIP-SERA EN-GINE, E-CRIP-SERA EN-JIN, E-KRIP-SERRAH EN-JEAN, Yī-kè-lǐ-pǔ-sī-lā Ān-jīn, 伊克利普斯拉 安金
 
 > [!NOTE]
-> The project is still in its early stages and actively under development.
-
+> The project status is now changed from **work in progress** to **deprecated**
+> > **Here's note:**
+hi there, i hope you wouldn't be sad to see this, but i really had to do it, due to my cpp limitation has come to the end, i may not able to continue working on this because i had a hard time understand stuff, and something i unable to do, it very difficult to me, and i trying to pushed it to the true limit and i think i am at the true limit now, The file right here that you'll get is a unfinish code, if you want to continue after me, i do appreciated for your contribution, loved you all ♥️
 
 # ❓ Got Question?
 If you got any questions, Feel free to leave it in Discussions! or find your question in this section!
