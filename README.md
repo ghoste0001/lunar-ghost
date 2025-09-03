@@ -28,6 +28,9 @@ This section provides an overview of which services are currently available in t
 
 ## Compatibility
 Eclipsera Engine is currently in its demo phase as LunarEngine, implementing a limited but functional subset of its intended API. While it's not feature-complete, it already supports a wide range of basic engine functionality enough to begin experimenting with rendering, scripting, and basic scene construction.
+
+
+
 ### Scene Rendering
 - Basic scene rendering is functional, enabling real-time visualization of 3D environments.
 - Includes lighting system support, featuring:
@@ -86,18 +89,19 @@ Eclipse Engine includes strong support for Luau scripting, with several powerful
 
 ## Current Features
 - Separated shader files: `shaders/shaders.h` and `shaders/sky.h` have been split from `Renderer.cpp` for better organization.
-- Basic support for the Roblox API, including `UserInputService`
+- Basic support for the Roblox API, including `UserInputService`, `TweenService`
 > (that only service that LunarEngine doesn't have it rn, be patience, i will add more but might take a time, i'm no expert at cpp language lol)
 - Early-stage support for GLSL shaders.
 - Performance improvements, Fixed a crash issue in the Lua scheduler that occurred when loading large LuaU files.
 > (Note: creating over 100,000 instances at once still causes crashes. this is currently a work in progress.)
+- Luau Based Camera Handler
+- Luau Script Type Inside of Lua `--$serverside`, `--$clientside`, `--$modular (wait i think i deprecate this already had no plan continue working on this, so no appearance..)`
 
 ## Roadmap 🏳
 - Add a new instance/class called `Skybox`.
 - Provide full GLSL shader support, along with legacy/basic post-processing options that can be used in the `LightingService` without requiring prior knowledge of GLSL.
 - Implement an ImGUI-based debugging tool to support development. This will include access to an Explorer panel, Properties, memory usage stats, and hardware information.
 - Rewrite LunarEngine’s ambient occlusion system using a modern technique, with customizable settings available through the `LightingService`.
-- Improve camera controls: transition from keyboard arrow-based control to a more standard right mouse button handler.
   
 # License©
 - Lua, licensed under the MIT License. | Copyright (c) 1998 Lua.org.
