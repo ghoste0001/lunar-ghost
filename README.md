@@ -1,175 +1,114 @@
-# LunarEngine (demo)
-<div style="display:flex; align-items:center; gap:20px; margin:10px 0;">
-  <a href="https://discord.gg/N66awhg7" style="text-decoration:none;">
-    <img src="https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Discord"/>
-  </a>
-  <a href="https://github.com/librebox-devs/librebox-demo/releases" style="text-decoration:none;">
-    <img src="https://img.shields.io/badge/Download_Releases-000000?logo=github&logoColor=white&style=for-the-badge" alt="Download Releases"/>
-  </a>
-</div>
+<img src="/repo/IconNLabelCompressed.svg" width="512"/>
 
-<br/>
-<p>
-  <img src="repo/LunarEngine.png" alt="Alt text" width="350"/>
-</p>
+# ECLIPSERA ENGINE (DEPRECATED)
+Eclipsera Engine is a modified version of [LunarEngine](https://github.com/lunarengine/lunar-test), designed to include features that the original project currently lacks. This engine is built using ROBLOX's Luau and aims to support the full range of Roblox APIs for game development. and Freedom of Game Development
 
-## Open-source Luau 3D engine (API-compatible)
+## **PRONOUNCIATION**
+E-CLIP-SERA EN-GINE, E-CRIP-SERA EN-JIN, E-KRIP-SERRAH EN-JEAN, Yī-kè-lǐ-pǔ-sī-lā Ān-jīn, 伊克利普斯拉 安金
 
-<div style="display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px;">
-  <img src="repo/example2.gif" alt="Demo gif" width="256"/>
-  <img src="repo/example3.gif" alt="Demo gif" width="256"/>
-  <div style="flex-basis:100%; height:0;"></div> <!-- forces new row -->
-  <img src="repo/example4.gif" alt="Demo gif" style="height:256px; width:auto;">
-</div>
-<img src="repo/example6.gif" alt="Demo gif" width="256"/>
+> [!NOTE]
+> The project status is now changed from **work in progress** to **deprecated**
+> > **Here's note:**
+hi there, i hope you wouldn't be sad to see this, but i really had to do it, due to my cpp limitation has come to the end, i may not able to continue working on this because i had a hard time understand stuff, and something i unable to do, it very difficult to me, and i trying to pushed it to the true limit and i think i am at the true limit now, The file right here that you'll get is a unfinish code, if you want to continue after me, i do appreciated for your contribution, loved you all ♥️
 
-### What is Lunar Engine?
-**LunarEngine** (formerly **Librebox**) is an open-source game engine powered by Luau. It delivers a sandbox-style API and development model inspired by popular sandbox engines, so existing Luau code runs with minimal changes.
+# ❓ Got Question?
+If you got any questions, Feel free to leave it in Discussions! or find your question in this section!
+- https://github.com/n1ckibreeki/Eclipsera-Engine/wiki/#❓-FAQ---Frequently-Asked-Questions
 
-### Why Lunar?
-Lunar gives developers full agency over their games - from the code to the engine. Build immersive experiences with a familiar interface while maintaining complete ownership of your platform.
+## How can i reported bug? Or give feedback?
+- You can report any suspected bugs in the Issues section.
+  - https://github.com/n1ckibreeki/Eclipsera-Engine/issues
+- For general feedback or suggestions, it is best to leave them in the Discussions tab.
+  - https://github.com/n1ckibreeki/Eclipsera-Engine/discussions
 
-### Example
+---
+## SERVICE AVAILABILITY
+This section provides an overview of which services are currently available in the engine and which ones are still under development or planned for the future. It is intended to help developers understand the current state of the engine's features and make informed decisions when building projects. For a detailed, up-to-date status of each service, please refer to the full list here
+- https://github.com/n1ckibreeki/Eclipsera-Engine/wiki/⚙-Services-Status
 
-Create a part in the Workspace, while rotating and cycling its color.
+## Compatibility
+Eclipsera Engine is currently in its demo phase as LunarEngine, implementing a limited but functional subset of its intended API. While it's not feature-complete, it already supports a wide range of basic engine functionality enough to begin experimenting with rendering, scripting, and basic scene construction.
+
+<video src="/repo/Parts.mp4" width="500px"></video>
+
+### Scene Rendering
+- Basic scene rendering is functional, enabling real-time visualization of 3D environments.
+- Includes lighting system support, featuring:
+  - `[Ambient lighting]:` Simulates overall light presence in a scene.
+  - `[Shadows]:` Dynamic or static, depending on lighting settings.
+  - `[Skybox rendering]:` Background visuals to create atmospheric depth.
+- Supports rendering of objects parented under `game.Workspace`, including `BasePart` instances.
+- Basic camera control is implemented, allowing for simple navigation or player view movement.
+Currently still uses the LunarEngine `"Libre-1"` rendering pipeline
+### Instance & Object System
+- Supports nearly the full Instance API, modeled after Roblox’s architecture.
+- Exceptions: Currently missing :WaitForChild() support.
+- Key instance methods and properties available:
+  - `.Parent` (for parenting to hierarchies)
+  - `:Destroy()`, `:Clone()` (object lifecycle control)
+### Part Implementation
+- Fully supports BasePart creation via
 ```lua
--- examples/part_example.lua
-local part = Instance.new("Part") -- Create a part
-part.Anchored = true -- compat
-part.Color = Color3.new(1,0,0) -- Make the part red
-part.Position = Vector3.new(0,2.5,0) -- Position it
-part.Parent = workspace -- Put it into workspace
-
-local rs = game:GetService("RunService")
-local t = 0
-
-rs.RenderStepped:Connect(function(dt)
-	t += dt
-	part.CFrame = CFrame.new(part.Position) * CFrame.Angles(0, t, 0) -- rotate in place with CFrame
-	part.Color = Color3.fromHSV((t*0.2 % 1), 1, 1) -- set part color
-end)
+Instance.new("Part")
 ```
+- Property support includes:
+  - `[Visuals]:` `BasePart.Color`, `BasePart.Transparency`
+  - `[Size and positioning]:` `BasePart.Size`, `BasePart.Position`, `BasePart.CFrame`
+> Future updates will add support for other instance types like `Model`, `MeshPart`, `Decal`, etc.
+### Core Data Types & Globals
+- Implements support for key standard data types: `CFrame`, `Vector3`, `Color3`, Random`
+- Core global objects and services: `game`, `script`, `workspace` are usable
+- `game:GetService()` for service retrieval is functional
+### Lighting System
+The Lighting service is partially implemented, supporting real-time ambient and environmental adjustments:
+  - `Lighting.Ambient` - sets global light tint
+  - `ighting.ShadowSoftness` - adjusts the contrast and blur of shadows
+  - `Lighting.ClockTime` - simulates in-game time of day
+  - `Lighting.Brightness` - controls scene brightness
+These can be dynamically changed at runtime and affect all visible objects.
+### RunService & Render Pipeline
+Full support for the five standard RunService stages: `RenderStepped`, `Heartbeat`, `Stepped`, etc.
+Allows connections and waits:
+```lua
+- RunService.RenderStepped:Connect(function...)
+- RunService.RenderStepped:Wait()
 ```
-> ./LunarApp.exe examples/part_example.lua
-```
-<img src="repo/example3.gif" alt="Demo gif" width="256"/>
+- Scripts can be synchronized with these stages for frame-accurate updates.
+### Program Execution Engine (Luau Support)
+Eclipse Engine includes strong support for Luau scripting, with several powerful features:
+- Full support for:
+  - `Scripts`, `LocalScripts`, `Coroutines`, `task.spawn`, `task.wait`, `task.delay`
+- Custom task scheduler named Hyperball manages script execution efficiently
+  - Prioritizes stable, non-blocking task management
+  - Built-in support for signals and event-based programming
+- Event handling via:
+  - `RTScriptSignal`, `:Connect()`, `:Disconnect()` style listeners
+- Optimized Luau runtime enabled by default for improved performance
 
-### Compatibility
-
-Lunar Engine is currently in demo stage (it implements a limited subset of its planned API), but here is what is supported:
-
-- Basic scene rendering
-  - Lighting, shadows, ambient, skybox
-    - Parts render within `game.Workspace`
-  - Basic camera movement
-  - Based on 'Libre-1' (to change in the future)
-- Standard data types
-  - `CFrame`, `Vector3`, `Color3`, `Random`
-  - `game`, `script`, `workspace`
-- Instance System
-  - Nearly complete Instance API (missing `:WaitForChild()`)
-  - `<instance>.Parent`
-  - `:Destroy()`, `:Clone()`
-- Parts
-  - Implements `BasePart`
-  - `Instance.new("Part")`
-  - `Part.Color`, `Part.Transparency`, `Part.Size`
-  - `Part.Position`, `Part.CFrame`
-  - More support in the future
-- Client-sided services
-  - `Workspace`
-    - `workspace.CurrentCamera`
-    - Default rendering stage
-  - `RunService`
-    - All five standard stages, including `RenderStep` and `HeartBeat`
-    - `game.RunService.RenderStepped:Wait()`, `:Connect()`
-  - `Lighting`
-    - `game.Lighting.Ambient`
-    - `game.Lighting.ShadowSoftness`
-    - `game.Lighting.ClockTime`
-    - `game.Lighting.Brightness`
-  - `game:GetService()`
-- Luau script support
-  - Highly capable 'Hyperball' task scheduler
-  - `RTScriptSignal`, Event binding, connections
-  - Coroutines, Scripts, LocalScripts
-  - `task.spawn`, `task.wait`, `task.delay`
-  - Luau optimization enabled by default
-- Window handling and fullscreen optimization
 ---
 
-### Download
-[Download releases here.](https://github.com/librebox-devs/librebox-demo/releases)
+## Current Features
+- Separated shader files: `shaders/shaders.h` and `shaders/sky.h` have been split from `Renderer.cpp` for better organization.
+- Basic support for the Roblox API, including `UserInputService`, `TweenService`
+> (that only service that LunarEngine doesn't have it rn, be patience, i will add more but might take a time, i'm no expert at cpp language lol)
+- Early-stage support for GLSL shaders.
+- Performance improvements, Fixed a crash issue in the Lua scheduler that occurred when loading large LuaU files.
+> (Note: creating over 100,000 instances at once still causes crashes. this is currently a work in progress.)
+- Luau Based Camera Handler
+- Luau Script Type Inside of Lua `--$serverside`, `--$clientside`, `--$modular (wait i think i deprecate this already had no plan continue working on this, so no appearance..)`
 
-### To Be Added
-
-Of course, this is just a rendering demo. Lunar Engine is extensible and easily supports the additions of new services and features. 
-
-In the next release, we will incorporate `UserInputService` and `StarterPlayer`, turning LunarApp into an actual interactive engine.
-
-### Platforms
-Lunar Engine currently supports Windows, but **can easily be ported anywhere**. The only dependencies are 'raylib' -- and raylib is already cross-platform.
-
-* Windows 7+ (`.exe`)
-  * Standalone executable (LunarApp.exe)
-* Linux support immediate priority
+## Roadmap 🏳
+- Add a new instance/class called `Skybox`.
+- Provide full GLSL shader support, along with legacy/basic post-processing options that can be used in the `LightingService` without requiring prior knowledge of GLSL.
+- Implement an ImGUI-based debugging tool to support development. This will include access to an Explorer panel, Properties, memory usage stats, and hardware information.
+- Rewrite LunarEngine’s ambient occlusion system using a modern technique, with customizable settings available through the `LightingService`.
   
-### Future Support
-
-Right now, Lunar Engine compatibility is limited. This is currently a demo (not even a release!). In future releases, you can expect the following:
-
-* Physics
-  * Collision events, aspects
-* Mesh support
-* game.Players, Player
-* UserInputService, ContextActionService
-* Image rendering, decals
-* Onscreen GUIs
-* Materials, stronger rendering
-
-And, in the future.
-* Replication support (and Servers)
-
-Lunar Engine is on its way to becoming a fully fledged dev platform -- just like Godot, or Unity, you can transfer your current Lua skills into Lunar, and create **games you own.**
-
-### The future of Lunar Engine
-
-In future releases, it could be entirely possible to:
-
-* Create a game within the Lunar Editor (assets and scripts)
-* Deploy a Lunar server (just like a "Minecraft" server)
-* Implement your own monetization
-* Get the full user experience, and professional game development
-  * No platform dependency
-* Use your own APIs or rewrite the source code
-
-This is entirely feasible, and, in fact, a good point for the existence of Lunar Engine. However, what we'd like to implement first is full client compatiblity (proper rendering, APIs). Then, this makes it easier to move on to servers.
-
-And best of all, it is copyright free and open source (Lunar Engine is just an environment.) 
-
-### Usage and Documentation
-
-I'll add this ASAP. For building dependencies, use the 'build_dependencies.bat' script, and for building the engine, `build_engine.bat`
-For the .exe, you can specify a path either as the first argument (lua script only), or as ``--path`` (script or folder). 
-LunarApp.exe includes three arguments: ``--no-place``, ``--target-fps``, and ``--path``.
-
-``--no-place``: (FLAG) Does not execute the default place initialization script (this includes the Baseplate.)
-``--target-fps``: Restrict the FPS to a certain value (default monitor refresh rate)
-``--path``: Path to script
-
-### Licenses
-This project uses:
-
-- Luau, licensed under the MIT License.  
-  Copyright (c) 2025 Roblox Corporation.  
-- raylib, licensed under the zlib/libpng License.  
-  Copyright (c) 2013-2025 Ramon Santamaria and contributors.
-
-### Legal Notice
-> Lunar Engine is an independent open-source project. It is not affiliated with or sponsored by any commercial platform. All names and references are for interoperability only. Lunar Engine uses no third-party source code, assets, or proprietary materials.
-
-### Contact (TEMPORARY ONLY)
-You can send requests or questions at ``librebox.developers@gmail.com``.
-
----
-##### "LUNARENGINE IS JUST AN ENVIRONMENT"
+# License©
+- Lua, licensed under the MIT License. | Copyright (c) 1998 Lua.org.
+  - https://www.lua.org/, https://github.com/lua/lua
+- Luau, licensed under the MIT License. | Copyright (c) 2025 Roblox Corporation.
+  - https://luau.org/ , https://github.com/luau-lang/luau
+- Raylib, licensed under the zlib/libpng License. | Copyright (c) 2013-2025 Ramon Santamaria and Contributors.
+  - https://www.raylib.com/ , https://github.com/raysan5/raylib
+- LunarEngine, licensed under the MIT License. | Copyright (c) 2025  LunarEngine Development.
+  - https://github.com/lunarengine/lunar-test/

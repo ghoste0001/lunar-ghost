@@ -1,0 +1,20 @@
+# Simple texture description for MeshPart testing
+# This is a placeholder for a texture file
+# In a real implementation, this would be a PNG, JPG, or other image format
+
+# Texture Properties:
+# - Name: Test Texture
+# - Size: 256x256
+# - Format: RGB
+# - Description: Simple checkerboard pattern for testing MeshPart texturing
+
+# For now, this serves as a placeholder until actual image loading is implemented
+# The MeshPart will reference this file path to demonstrate local asset loading
+
+TEXTURE_INFO:
+  name: "test_texture"
+  width: 256
+  height: 256
+  format: "RGB"
+  pattern: "checkerboard"
+  colors: ["#FF0000", "#FFFFFF"]  # Red and white checkerboard
