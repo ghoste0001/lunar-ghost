@@ -7,24 +7,18 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+env:
+  PROJECT_ROOT: .
+  BUILD_DIR: build
+  DIST_DIR: dist
+  CMAKE_PREFIX_PATH: third_party/vendor
+
 jobs:
   build-windows:
     runs-on: windows-latest
 
-    # This sets the default working directory for all 'run' steps to 'moon-engine'.
-    defaults:
-      run:
-        working-directory: moon-engine
-
-    strategy:
-      matrix:
-        build_type: [Release, Debug]
-
-    # These paths are now relative to the root of the repository.
-    env:
-      BUILD_DIR: ../build
-      DIST_DIR: ../dist
-      CMAKE_PREFIX_PATH: third_party/vendor
+    # The 'strategy: matrix' block has been removed.
+    # We now hardcode the build_type to Release.
 
     steps:
       - name: Checkout Code
@@ -32,15 +26,13 @@ jobs:
         with:
           submodules: 'recursive'
 
-      # This command is now run from within the 'moon-engine' directory.
-      - name: Configure CMake
+      - name: Configure CMake (Release)
         run: |
-          cmake . -B ${{ env.BUILD_DIR }} -G "Ninja" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}"
+          cmake . -B ${{ env.BUILD_DIR }} -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}"
 
-      # CORRECTED THIS STEP: Used the correct ${{ env.BUILD_DIR }} variable.
-      - name: Build
+      - name: Build (Release)
         run: |
-          cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} --parallel
+          cmake --build ${{ env.BUILD_DIR }} --config Release --parallel
 
       - name: Install
         run: |
@@ -49,5 +41,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MoonEngine-Windows-${{ matrix.build_type }}
+          name: MoonEngine-Windows-Release
           path: ${{ env.DIST_DIR }}
