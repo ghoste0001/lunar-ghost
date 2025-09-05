@@ -1,0 +1,172 @@
+Loaded configuration
+Resources validation passed
+Resources found at: %sC:\Users\Ghost\Documents\GitHub\lunar-ghost\moon-engine\build\resources
+-----------------------------
+ECLIPSERA ENGINE (Client)
+License: MIT license
+Author: Ghoste, NickiBreeki, LunarEngine Developers
+-----------------------------
+Stage: Initialization begin
+Initializing raylib 5.5
+Platform backend: DESKTOP (GLFW)
+Supported raylib modules:
+    > rcore:..... loaded (mandatory)
+    > rlgl:...... loaded (mandatory)
+    > rshapes:... loaded (optional)
+    > rtextures:. loaded (optional)
+    > rtext:..... loaded (optional)
+    > rmodels:... loaded (optional)
+    > raudio:.... loaded (optional)
+DISPLAY: Trying to enable MSAA x4
+DISPLAY: Trying to enable VSYNC
+DISPLAY: Device initialized successfully
+    > Display size: 1366 x 768
+    > Screen size:  1280 x 720
+    > Render size:  1280 x 720
+    > Viewport offsets: 0, 0
+GLAD: OpenGL extensions loaded successfully
+GL: Supported extensions count: 303
+GL: OpenGL device information:
+    > Vendor:   ATI Technologies Inc.
+    > Renderer: AMD Radeon(TM) R2 Graphics
+    > Version:  3.3.14830 Core Profile Context 22.6.1 31.0.23001.1500
+    > GLSL:     4.60
+GL: VAO extension detected, VAO functions loaded successfully
+GL: NPOT textures extension detected, full NPOT textures supported
+GL: DXT compressed textures supported
+GL: ETC2/EAC compressed textures supported
+PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 1] Default texture loaded successfully
+SHADER: [ID 1] Vertex shader compiled successfully
+SHADER: [ID 2] Fragment shader compiled successfully
+SHADER: [ID 3] Program shader loaded successfully
+SHADER: [ID 3] Default shader loaded successfully
+RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+RLGL: Default OpenGL state initialized successfully
+TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+FONT: Default font loaded successfully (224 glyphs)
+SYSTEM: Working Directory: C:\Users\Ghost\Documents\GitHub\lunar-ghost\moon-engine\build
+Raylib window initialized
+Game created
+Game::Init begin
+LuaScheduler: Initializing...
+Registering shared Librebox API
+Instance::New('Workspace')
+Service created 'Workspace'
+Instance::New('RunService')
+Service created 'RunService'
+Instance::New('Lighting')
+Service created 'Lighting'
+Instance::New('UserInputService')
+Service created 'UserInputService'
+Instance::New('TweenService')
+Service created 'TweenService'
+Instance::New('LogService')
+Service created 'LogService'
+CameraGame created
+Game::Init done
+TEXTURE: [ID 3] Texture loaded successfully (1024x1024 | GRAY_ALPHA | 1 mipmaps)
+FONT: Data loaded successfully (64 pixel size | 256 glyphs)
+Custom font loaded successfully from embedded data (size: 64, chars: 256, bytes: 636152)
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Workspace.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 4] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Workspace from resources/eclipsera-contents/textures/core/instance/Workspace.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Folder.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 5] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Folder from resources/eclipsera-contents/textures/core/instance/Folder.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Model.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 6] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Model from resources/eclipsera-contents/textures/core/instance/Model.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Part.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 7] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Part from resources/eclipsera-contents/textures/core/instance/Part.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/MeshPart.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 8] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: MeshPart from resources/eclipsera-contents/textures/core/instance/MeshPart.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Camera.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 9] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Camera from resources/eclipsera-contents/textures/core/instance/Camera.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Script.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 10] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Script from resources/eclipsera-contents/textures/core/instance/Script.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/LocalScript.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 11] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: LocalScript from resources/eclipsera-contents/textures/core/instance/LocalScript.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/BasePart.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 12] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: BasePart from resources/eclipsera-contents/textures/core/instance/BasePart.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Decal.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 13] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Decal from resources/eclipsera-contents/textures/core/instance/Decal.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Texture.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 14] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Texture from resources/eclipsera-contents/textures/core/instance/Texture.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/Sound.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 15] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: Sound from resources/eclipsera-contents/textures/core/instance/Sound.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/PointLight.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 16] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: PointLight from resources/eclipsera-contents/textures/core/instance/PointLight.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/SpotLight.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 17] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: SpotLight from resources/eclipsera-contents/textures/core/instance/SpotLight.png
+FILEIO: [resources/eclipsera-contents/textures/core/instance/SurfaceLight.png] File loaded successfully
+IMAGE: Data loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+TEXTURE: [ID 18] Texture loaded successfully (32x32 | R8G8B8A8 | 1 mipmaps)
+Loaded icon: SurfaceLight from resources/eclipsera-contents/textures/core/instance/SurfaceLight.png
+Loaded 15 instance icons
+GUI Manager initialized (icons loaded before scripts)
+BaseScript created 'place'
+Script created 'place'
+Detected client script: place
+Stage: Initialization end
+Stage: Run loop begin
+Stage: Run loop end
+Cleanup begin
+TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 13] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 4] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 5] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 6] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 15] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 7] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 8] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 11] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 12] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 14] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 16] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 17] Unloaded texture data from VRAM (GPU)
+TEXTURE: [ID 18] Unloaded texture data from VRAM (GPU)
+Unloaded all instance icons
+Unloaded all instance icons
+Game::Shutdown begin
+Instance::Destroy 'game'
+Instance::Destroy 'Workspace'
+Instance::Destroy 'CurrentCamera'
+Instance::Destroy 'Lighting'
+Instance::Destroy 'TweenService'
+LuaScheduler: Shutting down...
+Game::Shutdown end
+TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+SHADER: [ID 3] Default shader unloaded successfully
+TEXTURE: [ID 1] Default texture unloaded successfully
+Window closed successfully
+Cleanup end
