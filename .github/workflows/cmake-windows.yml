@@ -1,0 +1,53 @@
+name: Build MoonEngine
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    # This sets the default working directory for all 'run' steps to 'moon-engine'.
+    defaults:
+      run:
+        working-directory: moon-engine
+
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+
+    # These paths are now relative to the root of the repository.
+    env:
+      BUILD_DIR: ../build
+      DIST_DIR: ../dist
+      CMAKE_PREFIX_PATH: third_party/vendor
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      # This command is now run from within the 'moon-engine' directory.
+      - name: Configure CMake
+        run: |
+          cmake . -B ${{ env.BUILD_DIR }} -G "Ninja" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}"
+
+      # CORRECTED THIS STEP: Used the correct ${{ env.BUILD_DIR }} variable.
+      - name: Build
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} --parallel
+
+      - name: Install
+        run: |
+          cmake --install ${{ env.BUILD_DIR }} --prefix ${{ env.DIST_DIR }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoonEngine-Windows-${{ matrix.build_type }}
+          path: ${{ env.DIST_DIR }}
